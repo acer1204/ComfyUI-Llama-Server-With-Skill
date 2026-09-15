@@ -14,7 +14,7 @@ prompt 裡用一行指令即時切換。
 - 音訊輸入：需要模型支援（Qwen2-Audio、Ultravox 等）
 - 角色標記影像：`first_frame` / `last_frame` / `reference` / 自訂標籤，可串接任意多張
 - 完整取樣參數，附常用預設值；支援 JSON Schema 與 GBNF 文法
-- 一個 AIO 節點包辦全部，插槽隨接線長出來，連線與取樣參數收在設定面板
+- 一個 AIO 節點包辦全部，媒體插槽隨接線長出來，連線與取樣參數收在設定面板
 - 技能系統：內建 29 個，依群組分類，可串接多個，可在設定面板匯入 `.md` / `.zip`，或用 `/skill 名稱` 切換
 - 影片規格節點：秒數 0–15、畫面比例、解析度、模式（T2VA / I2VA / FL2VA / L2VA / Ref2VA）
 - 結構化多輸出：H3 風格的欄位各自成為獨立的 STRING 輸出
@@ -74,7 +74,7 @@ LoadImage ─→ image_1 ─→ Llama Prompter AIO ─→ full_prompt ─→ CLI
 | `mode` | `plain` 只輸出一則提示詞；`T2VA` / `I2VA` / `FL2VA` / `L2VA` / `Ref2VA` 走 H3 分欄位 |
 | `system_prompt` | 從設定面板自建的清單挑一個，會放在所有技能前面 |
 | `output_language` | 輸出語言 |
-| `skill_1` … `skill_5` | 依序套用，填了一個才會出現下一個 |
+| `skill_1` … `skill_5` | 依序套用，留 `(none)` 的會跳過 |
 | `duration_seconds` | 0–15 秒，影片模式用 |
 | `aspect_ratio` | 畫面比例 |
 | `image_1` … `image_9` | 接上一個才會長出下一個 |

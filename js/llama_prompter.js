@@ -587,7 +587,7 @@ app.registerExtension({
       category: ["Llama Prompter", "AIO", "Grow slots"],
       type: "boolean",
       defaultValue: true,
-      tooltip: "AIO 節點只顯示已接的插槽加一個備用。關掉會一次顯示全部。",
+      tooltip: "AIO 節點的影像 / 影片 / 音訊插槽只顯示已接的加一個備用。關掉會一次顯示全部。",
     },
     setting("LlamaPrompter.max_images", "max_images", "Max images", "number", 9,
       ["Llama Prompter", "AIO"], { tooltip: "改完要按 R 重新整理節點定義。" }),
@@ -689,38 +689,13 @@ app.registerExtension({
 /* ------------------------------------------------------------------ */
 /* AIO node: slots that appear as you fill them                        */
 /* ------------------------------------------------------------------ */
+// Only connection slots grow. Hiding widgets meant overriding litegraph's own
+// computeSize, and a restored widget came back at the wrong width, so the five
+// skill dropdowns simply stay visible.
 const GROWABLE_INPUTS = ["image_", "video_", "audio_"];
-const GROWABLE_WIDGETS = ["skill_"];
-const NONE_SKILL = "(none)";
-
-function numbered(items, prefix) {
-  return items
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => new RegExp(`^${prefix}\\d+$`).test(item.name))
-    .sort((a, b) => Number(a.item.name.slice(prefix.length)) - Number(b.item.name.slice(prefix.length)));
-}
 
 function growablePrefix(name) {
   return GROWABLE_INPUTS.find((prefix) => new RegExp(`^${prefix}\\d+$`).test(name)) || null;
-}
-
-/** Each returns true only when it actually changed something. */
-function hideWidget(widget) {
-  if (widget.llamaHidden) return false;
-  widget.llamaHidden = true;
-  widget.llamaType = widget.type;
-  widget.llamaCompute = widget.computeSize;
-  widget.type = "llamaHidden";
-  widget.computeSize = () => [0, -4];
-  return true;
-}
-
-function showWidget(widget) {
-  if (!widget.llamaHidden) return false;
-  widget.llamaHidden = false;
-  widget.type = widget.llamaType;
-  widget.computeSize = widget.llamaCompute;
-  return true;
 }
 
 /** Keep every filled slot plus exactly one spare.
@@ -771,19 +746,6 @@ function growSlots(node) {
     }
   }
 
-  for (const prefix of GROWABLE_WIDGETS) {
-    const widgets = numbered(node.widgets || [], prefix);
-    if (!widgets.length) continue;
-    let lastUsed = -1;
-    widgets.forEach(({ item }, position) => {
-      if (item.value && item.value !== NONE_SKILL) lastUsed = position;
-    });
-    const keep = Math.min(lastUsed + 2, widgets.length);
-    widgets.forEach(({ item }, position) => {
-      changed = (position < keep ? showWidget(item) : hideWidget(item)) || changed;
-    });
-  }
-
   // Only touch the size when the layout actually moved, and only ever grow:
   // recomputing on every edit threw away whatever size the user had dragged.
   if (!changed) return;
@@ -808,17 +770,6 @@ app.registerExtension({
       // The full slot list, so a removed spare can be added back later.
       this.llamaAllInputs = (this.inputs || []).map(({ name, type }) => ({ name, type }));
       this.llamaNoGrow = app.ui.settings.getSettingValue("LlamaPrompter.dynamic_slots") === false;
-      for (const prefix of GROWABLE_WIDGETS) {
-        for (const { item } of numbered(this.widgets || [], prefix)) {
-          const node = this;
-          const original = item.callback;
-          item.callback = function () {
-            const value = original?.apply(this, arguments);
-            growSlots(node);
-            return value;
-          };
-        }
-      }
       requestAnimationFrame(() => growSlots(this));
       return result;
     };
