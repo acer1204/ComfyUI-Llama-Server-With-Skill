@@ -704,20 +704,23 @@ function growablePrefix(name) {
   return GROWABLE_INPUTS.find((prefix) => new RegExp(`^${prefix}\\d+$`).test(name)) || null;
 }
 
-function hideWidget(node, widget) {
-  if (widget.llamaHidden) return;
+/** Each returns true only when it actually changed something. */
+function hideWidget(widget) {
+  if (widget.llamaHidden) return false;
   widget.llamaHidden = true;
   widget.llamaType = widget.type;
   widget.llamaCompute = widget.computeSize;
   widget.type = "llamaHidden";
   widget.computeSize = () => [0, -4];
+  return true;
 }
 
 function showWidget(widget) {
-  if (!widget.llamaHidden) return;
+  if (!widget.llamaHidden) return false;
   widget.llamaHidden = false;
   widget.type = widget.llamaType;
   widget.computeSize = widget.llamaCompute;
+  return true;
 }
 
 /** Keep every filled slot plus exactly one spare.
@@ -751,16 +754,20 @@ function growSlots(node) {
     if (spare) wanted.add(spare);
   }
 
+  let changed = false;
+
   for (let index = (node.inputs || []).length - 1; index >= 0; index--) {
     const slot = node.inputs[index];
     if (slot.link == null && growablePrefix(slot.name) && !wanted.has(slot.name)) {
       node.removeInput(index);
+      changed = true;
     }
   }
   const present = new Set((node.inputs || []).map((slot) => slot.name));
   for (const slot of catalogue) {
     if (wanted.has(slot.name) && !present.has(slot.name)) {
       node.addInput(slot.name, slot.type);
+      changed = true;
     }
   }
 
@@ -773,12 +780,18 @@ function growSlots(node) {
     });
     const keep = Math.min(lastUsed + 2, widgets.length);
     widgets.forEach(({ item }, position) => {
-      if (position < keep) showWidget(item);
-      else hideWidget(node, item);
+      changed = (position < keep ? showWidget(item) : hideWidget(item)) || changed;
     });
   }
 
-  node.setSize(node.computeSize());
+  // Only touch the size when the layout actually moved, and only ever grow:
+  // recomputing on every edit threw away whatever size the user had dragged.
+  if (!changed) return;
+  const [minWidth, minHeight] = node.computeSize();
+  node.setSize([
+    Math.max(node.size?.[0] ?? minWidth, minWidth),
+    Math.max(node.size?.[1] ?? minHeight, minHeight),
+  ]);
   node.setDirtyCanvas(true, true);
 }
 
@@ -830,7 +843,8 @@ app.registerExtension({
 /* node UI: live output preview                                        */
 /* ------------------------------------------------------------------ */
 const PREVIEW_NODES = new Set([
-  "LlamaPrompter", "LlamaVideoPrompter", "LlamaPreviewText", "LlamaTestConnection",
+  "LlamaPromptAIO", "LlamaPrompter", "LlamaVideoPrompter",
+  "LlamaPreviewText", "LlamaTestConnection",
 ]);
 
 app.registerExtension({
@@ -850,6 +864,8 @@ app.registerExtension({
       widget.inputEl.placeholder = "（執行後顯示結果）";
       widget.serializeValue = () => undefined;
       this.llamaPreview = widget;
+      // Starting size only; a saved workflow applies its own in configure.
+      if (nodeData.name === "LlamaPromptAIO") this.size = [480, 640];
       if (nodeData.name === "LlamaPrompter") this.size = [460, 480];
       if (nodeData.name === "LlamaVideoPrompter") this.size = [500, 560];
       return result;
