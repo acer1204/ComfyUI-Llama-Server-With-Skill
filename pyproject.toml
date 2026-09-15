@@ -1,0 +1,15 @@
+[project]
+name = "comfyui-llama-prompter"
+description = "Send images, video frames, audio and text to a llama.cpp llama-server and get a generation prompt back. Skills are importable Markdown system-prompt packs."
+version = "1.0.0"
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+dependencies = ["requests>=2.28", "Pillow>=9.0", "numpy>=1.23"]
+
+[project.urls]
+Repository = "https://github.com/your-name/ComfyUI-LlamaPrompter"
+
+[tool.comfy]
+PublisherId = "your-name"
+DisplayName = "Llama Prompter"
+Icon = ""

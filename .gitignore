@@ -1,0 +1,5 @@
+__pycache__/
+*.py[cod]
+.local_user/
+.venv/
+*.log
