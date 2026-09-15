@@ -14,7 +14,7 @@ prompt 裡用一行指令即時切換。
 - 音訊輸入：需要模型支援（Qwen2-Audio、Ultravox 等）
 - 角色標記影像：`first_frame` / `last_frame` / `reference` / 自訂標籤，可串接任意多張
 - 完整取樣參數，附常用預設值；支援 JSON Schema 與 GBNF 文法
-- 技能系統：內建 27 個，可在設定面板匯入 `.md` / `.zip`，或用 `/skill 名稱` 切換
+- 技能系統：內建 29 個，依群組分類，可串接多個，可在設定面板匯入 `.md` / `.zip`，或用 `/skill 名稱` 切換
 - 影片規格節點：秒數 0–15、畫面比例、解析度、模式（T2VA / I2VA / FL2VA / L2VA / Ref2VA）
 - 結構化多輸出：H3 風格的欄位各自成為獨立的 STRING 輸出
 - 顯存控制：請求前釋放 ComfyUI 模型，以及 `keep_alive` 秒數
@@ -109,24 +109,63 @@ defaults:
 支援兩種擺放方式：
 
 ```
-skills/flux-prompt.md
-skills/flux-prompt/SKILL.md      ← 可另外放 references/ 資料夾
+skills/<群組>/flux-prompt.md
+skills/<群組>/flux-prompt/SKILL.md      ← 可另外放 references/ 資料夾
 ```
 
 同一個資料夾裡的 `SKILL.cn.md` 會自動註冊成 `<名稱>-cn`，所以中英文版本可以分開選。
+
+### 群組
+
+技能在下拉選單裡以 `群組/名稱` 呈現，群組就是它所在的資料夾：
+
+```
+core/flux-prompt
+addons/cinematic-look
+minimax-h3/h3-prompt-writing
+user/my-skill
+```
+
+這樣近三十個技能混在一起時，來源一眼可辨，也可以直接打 `minimax` 過濾。
+群組來自資料夾名稱，想自己分類就在 `skills/` 底下開資料夾把 `.md` 丟進去，
+或是在 front matter 寫 `group: 你的分類` 覆寫。
+
+引用技能時打全名或只打名稱都可以，`core/sdxl-tags` 和 `sdxl-tags` 都找得到。
+
+### 串接多個技能
+
+`Llama Skill` 節點有 `chain` 輸入，可以一路串下去，**先接的先套用**：
+
+```
+Llama Skill (minimax-h3/h3-prompt-writing) ──chain──→ Llama Skill (addons/cinematic-look) ──→ Prompter
+```
+
+慣例是把決定輸出格式的技能放最前面，修飾用的放後面。`skills/addons/` 裡的三個
+就是為此設計的：`cinematic-look` 加電影感，`brand-safe` 去掉商標、可讀文字與可辨識人物。
+輸出語言不要用技能控制，那是 Prompter 節點 `output_language` 的工作。
+
+串接時的合併規則：系統提示依序串起來並標上 `# skill: 群組/名稱`；
+front matter 的 `defaults` 後面蓋前面；`## USER` 模板取最後一個有定義的技能。
 
 ### 切換方式
 
 `Llama Skill` 節點的 `mode`：
 
 - `manual` — 用下拉選單選
-- `from_prompt` — 在文字第一行或最後一行寫指令，四種寫法都接受：
+- `from_prompt` — 在文字自己一行寫指令，四種寫法都接受：
   `/skill sdxl-tags`、`/skill: sdxl-tags`、`@skill(sdxl-tags)`、`use skill = sdxl-tags`
-  指令那一行會從送出的文字中移除
-- `auto` — 先問模型該用哪個技能，再用它產生結果
-- `off` — 不套用技能
+  指令那一行會從送出的文字中移除。一行可以列多個，用逗號或 `+` 分隔，順序照寫：
 
-`skill_override` 欄位可以接字串節點，方便用工作流程動態指定名稱。
+  ```
+  /skill h3-prompt-writing, addons/cinematic-look
+  一隻貓走過下雪的木階
+  ```
+
+  prompt 裡只要出現指令，就會整條覆寫節點上串好的技能。
+- `auto` — 讓模型依描述再追加一個技能到鏈的最後面
+- `off` — 不套用任何技能
+
+`skill_override` 欄位可以接字串節點動態指定，同樣支援用逗號分隔多個。
 
 ### 匯入技能
 
@@ -140,12 +179,11 @@ ComfyUI 設定面板 → **Llama Prompter → Skills → Manage skills**，可�
 
 ### 內建技能
 
-自製 10 個：`flux-prompt`、`sdxl-tags`、`image-caption`、`image-to-prompt`、
-`video-prompt`、`video-to-prompt`、`negative-prompt`、`prompt-upsample`、
-`image-edit-instruction`、`zh-to-en-prompt`。
-
-另外附上 MiniMax-H3 的 9 個技能包（來源：`MiniMax-AI/MiniMax-H3` 的 `skills/` 目錄），
-含中文版共 17 個項目，其中 `h3-prompt-writing` 帶有 references。
+| 群組 | 數量 | 內容 |
+| --- | --- | --- |
+| `core` | 10 | `flux-prompt`、`sdxl-tags`、`image-caption`、`image-to-prompt`、`video-prompt`、`video-to-prompt`、`negative-prompt`、`prompt-upsample`、`image-edit-instruction`、`zh-to-en-prompt` |
+| `addons` | 2 | `cinematic-look`、`brand-safe`，設計來串在格式技能後面 |
+| `minimax-h3` | 17 | MiniMax-H3 的 9 個技能包（來源：`MiniMax-AI/MiniMax-H3` 的 `skills/` 目錄）含中文版，其中 `h3-prompt-writing` 帶有 references |
 
 ---
 
@@ -225,6 +263,7 @@ ComfyUI 設定 → **Llama Prompter**：
 | 影片請求逾時 | 調高 `timeout`，或調低 `max_frames` |
 | 新匯入的技能沒出現 | 按 **R** 重新整理節點定義 |
 | 輸出夾雜推理內容 | 打開 `strip_thinking` |
+| 中文輸出變亂碼 | 請更新到 1.0.1 以後，舊版串流解碼用錯字集 |
 | 欄位是空的 | 打開 `force_json`，或把 `max_tokens` 調高 |
 
 ---

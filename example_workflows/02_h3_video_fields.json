@@ -1,8 +1,8 @@
 {
   "id": "02_h3_video_fields",
   "revision": 0,
-  "last_node_id": 14,
-  "last_link_id": 13,
+  "last_node_id": 15,
+  "last_link_id": 14,
   "nodes": [
     {
       "id": 1,
@@ -149,6 +149,11 @@
           "link": null
         },
         {
+          "name": "chain",
+          "type": "LLAMA_SKILL",
+          "link": null
+        },
+        {
           "name": "skill_override",
           "type": "STRING",
           "widget": {
@@ -201,7 +206,7 @@
         "Node name for S&R": "LlamaSkill"
       },
       "widgets_values": [
-        "h3-prompt-writing",
+        "minimax-h3/h3-prompt-writing",
         "manual",
         "",
         "",
@@ -211,17 +216,114 @@
     },
     {
       "id": 3,
+      "type": "LlamaSkill",
+      "pos": [
+        40,
+        650
+      ],
+      "size": [
+        380,
+        240
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "skill",
+          "type": "COMBO",
+          "widget": {
+            "name": "skill"
+          },
+          "link": null
+        },
+        {
+          "name": "mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "mode"
+          },
+          "link": null
+        },
+        {
+          "name": "chain",
+          "type": "LLAMA_SKILL",
+          "link": 9
+        },
+        {
+          "name": "skill_override",
+          "type": "STRING",
+          "widget": {
+            "name": "skill_override"
+          },
+          "link": null
+        },
+        {
+          "name": "extra_instructions",
+          "type": "STRING",
+          "widget": {
+            "name": "extra_instructions"
+          },
+          "link": null
+        },
+        {
+          "name": "apply_skill_defaults",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "apply_skill_defaults"
+          },
+          "link": null
+        },
+        {
+          "name": "include_references",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "include_references"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "skill",
+          "type": "LLAMA_SKILL",
+          "links": [
+            10
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "system_prompt",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 1
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaSkill"
+      },
+      "widgets_values": [
+        "addons/cinematic-look",
+        "manual",
+        "",
+        "",
+        true,
+        false
+      ]
+    },
+    {
+      "id": 4,
       "type": "LlamaParams",
       "pos": [
         40,
-        670
+        910
       ],
       "size": [
         380,
         390
       ],
       "flags": {},
-      "order": 2,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
@@ -351,18 +453,18 @@
       ]
     },
     {
-      "id": 4,
+      "id": 5,
       "type": "LlamaMediaOptions",
       "pos": [
         40,
-        1100
+        1330
       ],
       "size": [
         380,
         240
       ],
       "flags": {},
-      "order": 3,
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
@@ -446,7 +548,7 @@
       ]
     },
     {
-      "id": 5,
+      "id": 6,
       "type": "LlamaVideoSpec",
       "pos": [
         470,
@@ -457,7 +559,7 @@
         300
       ],
       "flags": {},
-      "order": 4,
+      "order": 5,
       "mode": 0,
       "inputs": [
         {
@@ -556,7 +658,7 @@
       ]
     },
     {
-      "id": 6,
+      "id": 7,
       "type": "LoadImage",
       "pos": [
         470,
@@ -567,7 +669,7 @@
         310
       ],
       "flags": {},
-      "order": 5,
+      "order": 6,
       "mode": 0,
       "inputs": [
         {
@@ -612,7 +714,7 @@
       ]
     },
     {
-      "id": 7,
+      "id": 8,
       "type": "LoadImage",
       "pos": [
         470,
@@ -623,7 +725,7 @@
         310
       ],
       "flags": {},
-      "order": 6,
+      "order": 7,
       "mode": 0,
       "inputs": [
         {
@@ -668,7 +770,7 @@
       ]
     },
     {
-      "id": 8,
+      "id": 9,
       "type": "LlamaImageSlot",
       "pos": [
         830,
@@ -679,7 +781,7 @@
         130
       ],
       "flags": {},
-      "order": 7,
+      "order": 8,
       "mode": 0,
       "inputs": [
         {
@@ -728,7 +830,7 @@
       ]
     },
     {
-      "id": 9,
+      "id": 10,
       "type": "LlamaImageSlot",
       "pos": [
         830,
@@ -739,7 +841,7 @@
         130
       ],
       "flags": {},
-      "order": 8,
+      "order": 9,
       "mode": 0,
       "inputs": [
         {
@@ -788,7 +890,7 @@
       ]
     },
     {
-      "id": 10,
+      "id": 11,
       "type": "LlamaVideoPrompter",
       "pos": [
         1160,
@@ -799,7 +901,7 @@
         600
       ],
       "flags": {},
-      "order": 9,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
@@ -866,7 +968,7 @@
         {
           "name": "skill",
           "type": "LLAMA_SKILL",
-          "link": 9
+          "link": 10
         },
         {
           "name": "system_prompt",
@@ -954,7 +1056,7 @@
           "name": "description",
           "type": "STRING",
           "links": [
-            10
+            11
           ],
           "slot_index": 4
         },
@@ -962,7 +1064,7 @@
           "name": "overall_soundscape",
           "type": "STRING",
           "links": [
-            11
+            12
           ],
           "slot_index": 5
         },
@@ -970,7 +1072,7 @@
           "name": "non_diegetic_music",
           "type": "STRING",
           "links": [
-            12
+            13
           ],
           "slot_index": 6
         },
@@ -978,7 +1080,7 @@
           "name": "info",
           "type": "STRING",
           "links": [
-            13
+            14
           ],
           "slot_index": 7
         }
@@ -999,7 +1101,7 @@
       ]
     },
     {
-      "id": 11,
+      "id": 12,
       "type": "LlamaPreviewText",
       "pos": [
         1710,
@@ -1008,41 +1110,6 @@
       "size": [
         400,
         260
-      ],
-      "flags": {},
-      "order": 10,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "text",
-          "type": "STRING",
-          "link": 10
-        }
-      ],
-      "outputs": [
-        {
-          "name": "text",
-          "type": "STRING",
-          "links": [],
-          "slot_index": 0
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LlamaPreviewText"
-      },
-      "widgets_values": [],
-      "title": "description"
-    },
-    {
-      "id": 12,
-      "type": "LlamaPreviewText",
-      "pos": [
-        1710,
-        330
-      ],
-      "size": [
-        400,
-        190
       ],
       "flags": {},
       "order": 11,
@@ -1066,14 +1133,14 @@
         "Node name for S&R": "LlamaPreviewText"
       },
       "widgets_values": [],
-      "title": "overall_soundscape"
+      "title": "description"
     },
     {
       "id": 13,
       "type": "LlamaPreviewText",
       "pos": [
         1710,
-        550
+        330
       ],
       "size": [
         400,
@@ -1101,18 +1168,18 @@
         "Node name for S&R": "LlamaPreviewText"
       },
       "widgets_values": [],
-      "title": "non_diegetic_music"
+      "title": "overall_soundscape"
     },
     {
       "id": 14,
       "type": "LlamaPreviewText",
       "pos": [
         1710,
-        770
+        550
       ],
       "size": [
         400,
-        220
+        190
       ],
       "flags": {},
       "order": 13,
@@ -1136,6 +1203,41 @@
         "Node name for S&R": "LlamaPreviewText"
       },
       "widgets_values": [],
+      "title": "non_diegetic_music"
+    },
+    {
+      "id": 15,
+      "type": "LlamaPreviewText",
+      "pos": [
+        1710,
+        770
+      ],
+      "size": [
+        400,
+        220
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 14
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaPreviewText"
+      },
+      "widgets_values": [],
       "title": "info"
     }
   ],
@@ -1144,63 +1246,63 @@
       1,
       1,
       0,
-      10,
+      11,
       0,
       "LLAMA_SERVER"
     ],
     [
       2,
-      5,
+      6,
       0,
-      10,
+      11,
       3,
       "LLAMA_SPEC"
     ],
     [
       3,
-      6,
+      7,
       0,
-      8,
+      9,
       0,
       "IMAGE"
     ],
     [
       4,
-      7,
+      8,
       0,
-      9,
+      10,
       0,
       "IMAGE"
     ],
     [
       5,
-      8,
-      0,
       9,
+      0,
+      10,
       3,
       "LLAMA_IMAGES"
     ],
     [
       6,
-      9,
-      0,
       10,
+      0,
+      11,
       6,
       "LLAMA_IMAGES"
     ],
     [
       7,
-      3,
+      4,
       0,
-      10,
+      11,
       9,
       "LLAMA_PARAMS"
     ],
     [
       8,
-      4,
+      5,
       0,
-      10,
+      11,
       10,
       "LLAMA_MEDIA"
     ],
@@ -1208,39 +1310,47 @@
       9,
       2,
       0,
-      10,
-      11,
+      3,
+      2,
       "LLAMA_SKILL"
     ],
     [
       10,
-      10,
+      3,
+      0,
+      11,
+      11,
+      "LLAMA_SKILL"
+    ],
+    [
+      11,
+      11,
       4,
-      11,
+      12,
       0,
       "STRING"
     ],
     [
+      12,
       11,
-      10,
       5,
-      12,
+      13,
       0,
       "STRING"
     ],
     [
-      12,
-      10,
+      13,
+      11,
       6,
-      13,
+      14,
       0,
       "STRING"
     ],
     [
-      13,
-      10,
-      7,
       14,
+      11,
+      7,
+      15,
       0,
       "STRING"
     ]

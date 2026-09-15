@@ -239,6 +239,9 @@ class LlamaClient(object):
                 raise LlamaError(
                     "POST %s -> HTTP %d: %s" % (url, response.status_code, response.text[:500])
                 )
+            # Server-sent events are always UTF-8, but requests falls back to
+            # ISO-8859-1 for text/* without a charset and mangles the content.
+            response.encoding = "utf-8"
             line_iter = response.iter_lines(decode_unicode=True)
         else:
             context = None

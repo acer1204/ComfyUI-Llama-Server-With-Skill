@@ -143,9 +143,18 @@ function openSkillManager() {
   }
 
   const body = el("div", { display: "flex", flex: "1", minHeight: "0" });
-  const list = el("div", {
-    width: "290px", overflowY: "auto", borderRight: "1px solid rgba(255,255,255,.12)",
+  const sidebar = el("div", {
+    width: "260px", display: "flex", flexDirection: "column", minHeight: "0",
+    borderRight: "1px solid rgba(255,255,255,.12)",
   });
+  const filter = el("input", {
+    margin: "8px", padding: "5px 8px", borderRadius: "5px", font: "inherit",
+    border: "1px solid rgba(255,255,255,.18)", background: "rgba(0,0,0,.25)",
+    color: "inherit", outline: "none",
+  });
+  filter.placeholder = "搜尋技能…";
+  const list = el("div", { flex: "1", overflowY: "auto" });
+  sidebar.append(filter, list);
   const editorPane = el("div", { flex: "1", display: "flex", flexDirection: "column", minWidth: "0" });
 
   const editorBar = el("div", {
@@ -176,7 +185,7 @@ function openSkillManager() {
   }, "");
 
   editorPane.append(editorBar, editor, footer);
-  body.append(list, editorPane);
+  body.append(sidebar, editorPane);
   panel.append(header, body);
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
@@ -194,46 +203,86 @@ function openSkillManager() {
     app.refreshComboInNodes?.();
   }
 
-  async function reload(selectName) {
+  const collapsed = new Set();
+
+  async function reload(selectPath) {
     const data = await listSkills(true);
+    const filterText = filter.value.trim().toLowerCase();
     list.innerHTML = "";
     footer.textContent = `skills 搜尋路徑：${(data.paths || []).join("  |  ")}`;
+
+    const buckets = new Map();
     for (const skill of data.skills || []) {
-      const row = el("div", {
-        padding: "9px 12px", cursor: "pointer",
-        borderBottom: "1px solid rgba(255,255,255,.06)",
-      });
-      const nameLine = el("div", { display: "flex", gap: "6px", alignItems: "baseline" });
-      nameLine.appendChild(el("span", { fontWeight: "600" }, skill.name));
-      if (skill.builtin) {
-        nameLine.appendChild(el("span", {
-          fontSize: "10px", padding: "1px 5px", borderRadius: "3px",
-          background: "rgba(120,170,255,.22)",
-        }, "內建"));
-      }
-      row.appendChild(nameLine);
-      row.appendChild(el("div", { fontSize: "11px", opacity: ".7", marginTop: "2px" },
-        skill.description || "(無說明)"));
-      row.onclick = async () => {
-        const detail = await readSkill(skill.name);
-        if (detail.error) return toast(detail.error, "error");
-        current = detail;
-        title.textContent = `${detail.name}${detail.builtin ? "（內建，儲存會另存為使用者技能）" : ""}`;
-        editor.value = detail.content || "";
-        for (const child of list.children) child.style.background = "";
-        row.style.background = "rgba(255,255,255,.1)";
-      };
-      if (selectName && skill.name === selectName) setTimeout(() => row.click(), 0);
-      list.appendChild(row);
+      if (filterText && !skill.path.toLowerCase().includes(filterText)) continue;
+      const group = skill.group || "(ungrouped)";
+      if (!buckets.has(group)) buckets.set(group, []);
+      buckets.get(group).push(skill);
     }
+
+    if (!buckets.size) {
+      list.appendChild(el("div", { padding: "14px", opacity: ".6" }, "沒有符合的技能"));
+      return;
+    }
+
+    let rowToOpen = null;
+    for (const [group, items] of buckets) {
+      const header = el("div", {
+        display: "flex", alignItems: "center", gap: "6px",
+        padding: "7px 10px", cursor: "pointer", userSelect: "none",
+        background: "rgba(255,255,255,.06)", fontWeight: "600", fontSize: "12px",
+        position: "sticky", top: "0",
+      });
+      const caret = el("span", { width: "10px", opacity: ".7" },
+        collapsed.has(group) ? "▸" : "▾");
+      header.append(caret, el("span", { flex: "1" }, group),
+        el("span", { opacity: ".55", fontWeight: "400" }, String(items.length)));
+      list.appendChild(header);
+
+      const body = el("div", { display: collapsed.has(group) ? "none" : "block" });
+      header.onclick = () => {
+        if (collapsed.has(group)) collapsed.delete(group);
+        else collapsed.add(group);
+        caret.textContent = collapsed.has(group) ? "▸" : "▾";
+        body.style.display = collapsed.has(group) ? "none" : "block";
+      };
+
+      for (const skill of items) {
+        const row = el("div", {
+          padding: "6px 10px 6px 26px", cursor: "pointer", fontSize: "12.5px",
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }, skill.name);
+        row.title = skill.description || "(無說明)";
+        if (skill.references) {
+          row.appendChild(el("span", { opacity: ".5", fontSize: "10px" },
+            `  ref×${skill.references}`));
+        }
+        row.onmouseenter = () => { if (current?.path !== skill.path) row.style.background = "rgba(255,255,255,.05)"; };
+        row.onmouseleave = () => { if (current?.path !== skill.path) row.style.background = ""; };
+        row.onclick = async () => {
+          const detail = await readSkill(skill.path);
+          if (detail.error) return toast(detail.error, "error");
+          current = detail;
+          title.textContent = `${detail.path}${detail.builtin ? "（內建，儲存會另存為使用者技能）" : ""}`;
+          editor.value = detail.content || "";
+          for (const child of list.querySelectorAll("[data-skill]")) child.style.background = "";
+          row.style.background = "rgba(255,255,255,.12)";
+        };
+        row.dataset.skill = skill.path;
+        if (selectPath && skill.path === selectPath) rowToOpen = row;
+        body.appendChild(row);
+      }
+      list.appendChild(body);
+    }
+    if (rowToOpen) setTimeout(() => rowToOpen.click(), 0);
   }
 
   closeButton.onclick = close;
   overlay.onclick = (event) => { if (event.target === overlay) close(); };
-  refreshButton.onclick = () => reload(current?.name);
+  refreshButton.onclick = () => reload(current?.path);
+  filter.oninput = () => reload();
   importButton.onclick = () => fileInput.click();
   newButton.onclick = () => {
-    current = { name: "my-skill", builtin: false };
+    current = { name: "my-skill", path: "user/my-skill", builtin: false };
     title.textContent = "新技能（改好 front matter 的 name 再儲存）";
     editor.value = TEMPLATE;
   };
@@ -258,9 +307,9 @@ function openSkillManager() {
   };
 
   deleteButton.onclick = async () => {
-    if (!current?.name) return;
-    if (!confirm(`確定刪除技能「${current.name}」？`)) return;
-    const result = await deleteSkill(current.name);
+    if (!current?.path) return;
+    if (!confirm(`確定刪除技能「${current.path}」？`)) return;
+    const result = await deleteSkill(current.path);
     if (result.error) return toast(result.error, "error");
     current = null;
     editor.value = "";

@@ -20,6 +20,10 @@ def _json(payload, status=200):
 def _skill_row(skill):
     return {
         "name": skill["name"],
+        "group": skill.get("group", ""),
+        "path": skill.get("path", skill["name"]),
+        "language": skill.get("language", ""),
+        "references": len(skill.get("ref_files") or []),
         "description": skill["description"],
         "version": skill["version"],
         "tags": skill["tags"],
@@ -110,7 +114,9 @@ def register(server_instance=None):
         if request.query.get("refresh"):
             skills.invalidate()
         found = skills.discover(force=bool(request.query.get("refresh")))
-        rows = [_skill_row(s) for s in sorted(found.values(), key=lambda s: s["name"].lower())]
+        rows = [_skill_row(s) for s in sorted(
+            found.values(),
+            key=lambda s: ((s.get("group") or "").lower(), s["name"].lower()))]
         return _json({"skills": rows, "paths": config.skill_search_paths()})
 
     @routes.get(PREFIX + "/skill")
@@ -201,7 +207,9 @@ def register(server_instance=None):
             "ok": not errors,
             "imported": imported,
             "errors": errors,
-            "skills": [_skill_row(s) for s in sorted(found.values(), key=lambda s: s["name"].lower())],
+            "skills": [_skill_row(s) for s in sorted(
+                found.values(),
+                key=lambda s: ((s.get("group") or "").lower(), s["name"].lower()))],
         })
 
     # -- connection test --------------------------------------------------

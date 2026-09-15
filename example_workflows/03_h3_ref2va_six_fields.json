@@ -149,6 +149,11 @@
           "link": null
         },
         {
+          "name": "chain",
+          "type": "LLAMA_SKILL",
+          "link": null
+        },
+        {
           "name": "skill_override",
           "type": "STRING",
           "widget": {
@@ -201,7 +206,7 @@
         "Node name for S&R": "LlamaSkill"
       },
       "widgets_values": [
-        "h3-prompt-writing",
+        "minimax-h3/h3-prompt-writing",
         "manual",
         "",
         "",

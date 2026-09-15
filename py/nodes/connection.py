@@ -238,7 +238,7 @@ class LlamaMediaOptions:
 
 
 class LlamaSkillNode:
-    """Pick the skill (system prompt pack) that shapes the output."""
+    """Pick a skill, and chain several of them in order."""
 
     MODES = ["manual", "from_prompt", "auto", "off"]
 
@@ -247,23 +247,28 @@ class LlamaSkillNode:
         names = skills.list_names()
         default = config.get("default_skill") or skills.NONE_SKILL
         if default not in names:
-            default = names[0]
+            resolved = skills.get_skill(default)
+            default = resolved["path"] if resolved else names[0]
         return {
             "required": {
                 "skill": (names, {
                     "default": default,
-                    "tooltip": "從 skills 目錄載入的技能。匯入新技能後按 R 重新整理節點定義。",
+                    "tooltip": "技能以 群組/名稱 列出。匯入新技能後按 R 重新整理節點定義。",
                 }),
                 "mode": (cls.MODES, {
                     "default": "manual",
                     "tooltip": "manual=用上面選的；from_prompt=文字裡寫 /skill 名稱 來切換；"
-                               "auto=讓模型自己依描述挑選；off=不套用任何技能。",
+                               "auto=讓模型依描述再追加一個；off=不套用任何技能。",
                 }),
             },
             "optional": {
+                "chain": ("LLAMA_SKILL", {
+                    "tooltip": "串接上一個 Skill 節點。前面的先套用，這個接在後面，"
+                               "所以把格式技能（例如 h3-prompt-writing）放最前面。",
+                }),
                 "skill_override": ("STRING", {
                     "default": "",
-                    "tooltip": "直接輸入技能名稱，優先於下拉選單（方便用字串節點動態切換）。",
+                    "tooltip": "直接輸入技能名稱，優先於下拉選單。可用逗號分隔多個，依序套用。",
                 }),
                 "extra_instructions": ("STRING", {
                     "default": "", "multiline": True,
@@ -286,24 +291,44 @@ class LlamaSkillNode:
     RETURN_NAMES = ("skill", "system_prompt")
     FUNCTION = "build"
     CATEGORY = CATEGORY
-    DESCRIPTION = "選擇 / 切換 skill（可用下拉、字串覆寫、prompt 指令或自動路由）。"
+    DESCRIPTION = "選擇 skill，可串接多個並保有順序。"
 
-    def build(self, skill, mode, skill_override="", extra_instructions="",
+    def build(self, skill, mode, chain=None, skill_override="", extra_instructions="",
               apply_skill_defaults=True, include_references=False):
-        name = (skill_override or "").strip() or skill
-        resolved = skills.get_skill(name)
+        previous = dict(chain or {})
+        items = list(previous.get("items") or [])
+
+        wanted = [n.strip() for n in (skill_override or "").split(",") if n.strip()]
+        if not wanted and skill != skills.NONE_SKILL:
+            wanted = [skill]
+
+        for name in wanted:
+            items.append({
+                "name": name,
+                "include_references": bool(include_references),
+            })
+
+        notes = [previous.get("extra_instructions", ""), (extra_instructions or "").strip()]
         selector = {
-            "name": name,
+            "items": items,
             "mode": mode,
-            "extra_instructions": (extra_instructions or "").strip(),
+            "extra_instructions": "\n\n".join(n for n in notes if n),
             "apply_defaults": bool(apply_skill_defaults),
-            "include_references": bool(include_references),
         }
-        preview = resolved["system"] if resolved else ""
-        if include_references and resolved:
-            preview = preview + skills.load_references(resolved)
-        if extra_instructions and preview:
-            preview = preview + "\n\n" + extra_instructions.strip()
+
+        parts = []
+        for item in items:
+            resolved = skills.get_skill(item["name"])
+            if not resolved:
+                parts.append("# missing skill: %s" % item["name"])
+                continue
+            body = "# skill: %s\n\n%s" % (resolved["path"], resolved["system"])
+            if item["include_references"]:
+                body += skills.load_references(resolved)
+            parts.append(body)
+        preview = "\n\n---\n\n".join(parts)
+        if selector["extra_instructions"] and preview:
+            preview += "\n\n" + selector["extra_instructions"]
         return (selector, preview)
 
 

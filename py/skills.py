@@ -196,6 +196,8 @@ def parse_skill_text(text, name_hint="", source=""):
         "builtin": is_builtin,
         "language": "",
         "ref_files": [],
+        "group": str(meta.get("group") or "").strip(),
+        "path": name,
     }
 
 
@@ -269,36 +271,81 @@ def discover(force=False):
     for directory in config.skill_search_paths():
         if not os.path.isdir(directory):
             continue
-        for entry in sorted(os.listdir(directory)):
-            full = os.path.join(directory, entry)
-            if os.path.isdir(full):
-                for candidate in ("SKILL.md", "skill.md", entry + ".md"):
-                    path = os.path.join(full, candidate)
-                    if os.path.isfile(path):
-                        skill = _load_skill_file(path, entry)
-                        if skill:
-                            found[skill["name"]] = skill
-                        break
-                # Localised variants, e.g. SKILL.cn.md -> "<name>-cn".
-                for fname in sorted(os.listdir(full)):
-                    match = _LANG_VARIANT_RE.match(fname)
-                    if not match:
-                        continue
-                    variant = _load_skill_file(os.path.join(full, fname), entry)
-                    if not variant:
-                        continue
-                    lang = match.group(1).lower()
-                    variant["language"] = lang
-                    variant["name"] = "%s-%s" % (variant["name"], lang)
-                    found[variant["name"]] = variant
-            elif entry.lower().endswith((".md", ".markdown")):
-                skill = _load_skill_file(full, os.path.splitext(entry)[0])
-                if skill:
-                    found[skill["name"]] = skill
+        _scan(directory, _base_group(directory), found, depth=0)
 
     _CACHE["skills"] = found
     _CACHE["stamp"] = now
     return dict(found)
+
+
+def _base_group(directory):
+    """Group label for loose skills sitting directly in a search path."""
+    directory = os.path.abspath(directory)
+    if directory == os.path.abspath(config.BUILTIN_SKILL_DIR):
+        return "core"
+    if directory == os.path.abspath(config.user_skill_dir()):
+        return "user"
+    return safe_slug(os.path.basename(directory.rstrip(os.sep))) or "extra"
+
+
+def _pack_entry(directory, name):
+    """Return the main SKILL.md of a skill folder, or None if it is a group."""
+    for candidate in ("SKILL.md", "skill.md", name + ".md"):
+        path = os.path.join(directory, candidate)
+        if os.path.isfile(path):
+            return path
+    return None
+
+
+def _register(found, skill, group):
+    skill["group"] = group
+    skill["path"] = ("%s/%s" % (group, skill["name"])) if group else skill["name"]
+    found[skill["path"]] = skill
+
+
+def _scan(directory, group, found, depth):
+    try:
+        entries = sorted(os.listdir(directory))
+    except OSError:
+        return
+
+    for entry in entries:
+        full = os.path.join(directory, entry)
+
+        if os.path.isdir(full):
+            main = _pack_entry(full, entry)
+            if main is None:
+                # Not a skill pack, so treat it as a group folder.
+                if depth < 3:
+                    child = entry if depth == 0 else "%s/%s" % (group, entry)
+                    _scan(full, safe_group(child), found, depth + 1)
+                continue
+
+            skill = _load_skill_file(main, entry)
+            if skill:
+                _register(found, skill, skill.get("group") or group)
+
+            # Localised variants, e.g. SKILL.cn.md -> "<name>-cn".
+            for fname in sorted(os.listdir(full)):
+                match = _LANG_VARIANT_RE.match(fname)
+                if not match:
+                    continue
+                variant = _load_skill_file(os.path.join(full, fname), entry)
+                if not variant:
+                    continue
+                variant["language"] = match.group(1).lower()
+                variant["name"] = "%s-%s" % (variant["name"], variant["language"])
+                _register(found, variant, variant.get("group") or group)
+
+        elif entry.lower().endswith((".md", ".markdown")):
+            skill = _load_skill_file(full, os.path.splitext(entry)[0])
+            if skill:
+                _register(found, skill, skill.get("group") or group)
+
+
+def safe_group(group):
+    parts = [safe_slug(p) for p in str(group or "").split("/") if p.strip()]
+    return "/".join(p for p in parts if p)
 
 
 def invalidate():
@@ -307,59 +354,102 @@ def invalidate():
 
 
 def list_names(include_none=True):
-    names = sorted(discover().keys(), key=str.lower)
+    """Dropdown entries, as ``group/name`` sorted by group then name."""
+    skills = discover()
+    names = sorted(skills.keys(), key=lambda p: (p.count("/") == 0, p.lower()))
     return ([NONE_SKILL] + names) if include_none else names
 
 
 def get_skill(name):
+    """Resolve by ``group/name``, by bare name, or case-insensitively."""
     if not name or name == NONE_SKILL:
         return None
+    wanted = str(name).strip().strip("/")
     skills = discover()
-    if name in skills:
-        return skills[name]
-    lowered = {k.lower(): v for k, v in skills.items()}
-    return lowered.get(str(name).strip().lower())
+    if wanted in skills:
+        return skills[wanted]
+
+    by_path = {path.lower(): skill for path, skill in skills.items()}
+    if wanted.lower() in by_path:
+        return by_path[wanted.lower()]
+
+    # Bare name: unique match wins, otherwise the first in group order.
+    matches = [skill for path, skill in sorted(skills.items())
+               if skill["name"].lower() == wanted.lower()]
+    if matches:
+        return matches[0]
+
+    # Last resort: a unique suffix match, so "h3/h3-prompt-writing" style
+    # abbreviations still resolve.
+    suffix = [skill for path, skill in sorted(skills.items())
+              if path.lower().endswith("/" + wanted.lower())]
+    return suffix[0] if suffix else None
 
 
-def catalog_text(max_items=60):
-    """Compact ``name: description`` listing used by auto skill routing."""
+def groups():
+    """``{group: [skill, ...]}`` for the settings UI."""
+    buckets = {}
+    for skill in discover().values():
+        buckets.setdefault(skill.get("group") or "", []).append(skill)
+    for items in buckets.values():
+        items.sort(key=lambda s: s["name"].lower())
+    return buckets
+
+
+def catalog_text(max_items=80):
+    """Compact ``group/name: description`` listing used by auto routing."""
     lines = []
-    for name, skill in sorted(discover().items(), key=lambda kv: kv[0].lower())[:max_items]:
-        description = skill["description"] or "(no description)"
-        lines.append("- %s: %s" % (name, description))
-    return "\n".join(lines)
+    for group in sorted(groups().keys()):
+        for skill in groups()[group][:max_items]:
+            description = skill["description"] or "(no description)"
+            lines.append("- %s: %s" % (skill["path"], description))
+    return "\n".join(lines[:max_items])
 
 
 # ---------------------------------------------------------------------------
 # prompt-driven switching
 # ---------------------------------------------------------------------------
+_NAME_CHARS = r"[A-Za-z0-9_\-./]+"
+_NAME_LIST = r"%s(?:[ \t]*[,+][ \t]*%s)*" % (_NAME_CHARS, _NAME_CHARS)
+
 _DIRECTIVE_PATTERNS = [
-    re.compile(r"^[ \t]*/skill[:=\s]+([A-Za-z0-9_\-.]+)[ \t]*$", re.MULTILINE),
-    re.compile(r"^[ \t]*@skill\([ \t]*([A-Za-z0-9_\-.]+)[ \t]*\)[ \t]*$", re.MULTILINE),
-    re.compile(r"^[ \t]*--skill[:=\s]+([A-Za-z0-9_\-.]+)[ \t]*$", re.MULTILINE),
-    re.compile(r"^[ \t]*(?:use\s+skill|skill)[ \t]*[:=][ \t]*([A-Za-z0-9_\-.]+)[ \t]*$",
+    re.compile(r"^[ \t]*/skill[:=\s]+(%s)[ \t]*$" % _NAME_LIST, re.MULTILINE),
+    re.compile(r"^[ \t]*@skill\([ \t]*(%s)[ \t]*\)[ \t]*$" % _NAME_LIST, re.MULTILINE),
+    re.compile(r"^[ \t]*--skill[:=\s]+(%s)[ \t]*$" % _NAME_LIST, re.MULTILINE),
+    re.compile(r"^[ \t]*(?:use\s+skill|skill)[ \t]*[:=][ \t]*(%s)[ \t]*$" % _NAME_LIST,
                re.MULTILINE | re.IGNORECASE),
 ]
 
 
-def extract_directive(text):
-    """Pull a ``/skill name`` directive out of ``text``.
+def extract_directives(text):
+    """Pull every ``/skill name`` line out of ``text``.
 
-    Returns ``(skill_name_or_None, cleaned_text)``.  Only directives that sit
-    on their own line are honoured, so ordinary prose is never mangled.
+    Returns ``(names, cleaned_text)``.  Several names may share one line
+    (``/skill a, b``) and several lines may appear; order is preserved.  Only
+    directives that sit on their own line count, so prose is never mangled.
     """
     if not text:
-        return None, text or ""
+        return [], text or ""
 
-    name = None
+    names = []
     cleaned = text
     for pattern in _DIRECTIVE_PATTERNS:
-        match = pattern.search(cleaned)
-        if match:
-            name = match.group(1).strip()
+        while True:
+            match = pattern.search(cleaned)
+            if not match:
+                break
+            for part in re.split(r"[,+]", match.group(1)):
+                part = part.strip().strip("/")
+                if part:
+                    names.append(part)
             cleaned = cleaned[: match.start()] + cleaned[match.end():]
-            break
-    return name, cleaned.strip()
+    return names, cleaned.strip()
+
+
+def extract_directive(text):
+    """Backwards-compatible single-name wrapper around :func:`extract_directives`."""
+    names, cleaned = extract_directives(text)
+    return (names[0] if names else None), cleaned
 
 
 def render_user_template(skill, text, media_summary=""):
@@ -372,6 +462,29 @@ def render_user_template(skill, text, media_summary=""):
     rendered = rendered.replace("{{media}}", media_summary or "")
     rendered = rendered.replace("{{skill}}", (skill or {}).get("name", ""))
     return rendered.strip()
+
+
+def compose(resolved, separator="\n\n---\n\n"):
+    """Merge several skills into one system prompt / template / defaults set."""
+    systems = []
+    defaults = {}
+    template = ""
+    for skill in resolved:
+        if not skill:
+            continue
+        body = skill.get("system") or ""
+        if body:
+            header = "# skill: %s" % skill.get("path", skill.get("name", ""))
+            systems.append(header + "\n\n" + body)
+        defaults.update(skill.get("defaults") or {})
+        if skill.get("user_template"):
+            template = skill["user_template"]
+    return {
+        "system": separator.join(systems),
+        "defaults": defaults,
+        # The most specific skill in the chain decides the user message shape.
+        "user_template": template,
+    }
 
 
 # ---------------------------------------------------------------------------

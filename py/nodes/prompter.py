@@ -259,63 +259,94 @@ class LlamaPrompter:
         return None
 
     # ------------------------------------------------------------------
+    @staticmethod
+    def _resolve_items(items, log):
+        """Turn selector items into skill dicts, keeping the chain order."""
+        resolved = []
+        for item in items or []:
+            name = item.get("name") if isinstance(item, dict) else item
+            skill = skills.get_skill(name)
+            if not skill:
+                if name not in (skills.NONE_SKILL, "", None):
+                    log.append("找不到技能 '%s'。" % name)
+                continue
+            skill = dict(skill)
+            skill["include_references"] = bool(
+                item.get("include_references") if isinstance(item, dict) else False
+            )
+            resolved.append(skill)
+        return resolved
+
     def _resolve_skill(self, selector, text, client, model, media_summary, log):
-        """Return ``(skill_dict_or_None, cleaned_text, resolved_name)``."""
+        """Return ``(ordered_skills, cleaned_text, display_name)``."""
         selector = selector or {}
         mode = selector.get("mode", "manual")
         cleaned = text or ""
 
+        items = selector.get("items")
+        if items is None and selector.get("name"):
+            items = [{"name": selector["name"],
+                      "include_references": selector.get("include_references", False)}]
+
         if mode == "off":
-            return None, cleaned, skills.NONE_SKILL
+            return [], cleaned, skills.NONE_SKILL
 
         if mode == "from_prompt":
-            directive, cleaned = skills.extract_directive(cleaned)
-            name = directive or selector.get("name") or skills.NONE_SKILL
-            resolved = skills.get_skill(name)
-            if directive and not resolved:
-                log.append("prompt 指定的技能 '%s' 不存在，改用預設。" % directive)
-                name = selector.get("name") or skills.NONE_SKILL
-                resolved = skills.get_skill(name)
-            return resolved, cleaned, (resolved or {}).get("name", skills.NONE_SKILL)
+            directives, cleaned = skills.extract_directives(cleaned)
+            if directives:
+                # An explicit list in the prompt replaces the whole chain.
+                picked = self._resolve_items(
+                    [{"name": n, "include_references": False} for n in directives], log
+                )
+                if picked:
+                    return picked, cleaned, self._display(picked)
+                log.append("prompt 指定的技能都不存在，改用節點上的設定。")
+
+        resolved = self._resolve_items(items, log)
 
         if mode == "auto":
-            catalog = skills.catalog_text()
-            if not catalog.strip():
-                return None, cleaned, skills.NONE_SKILL
-            question = (
-                "Available skills:\n%s\n\nUser request: %s\nAttached media: %s"
-                % (catalog, cleaned or "(no text)", media_summary or "none")
-            )
-            try:
-                reply = client.chat(
-                    [
-                        {"role": "system", "content": _ROUTE_SYSTEM},
-                        {"role": "user", "content": question},
-                    ],
-                    params={"temperature": 0.0, "max_tokens": 64},
-                    model=model,
-                    stream=False,
-                )
-                picked = self._parse_route(reply.get("content", ""))
-            except Exception as exc:
-                log.append("自動路由失敗（%s），改用手動選擇。" % exc)
-                picked = None
-            if picked:
-                resolved = skills.get_skill(picked)
-                if resolved:
-                    log.append("自動選擇技能：%s" % resolved["name"])
-                    return resolved, cleaned, resolved["name"]
-                log.append("模型選了不存在的技能 '%s'。" % picked)
-            name = selector.get("name") or skills.NONE_SKILL
-            resolved = skills.get_skill(name)
-            return resolved, cleaned, (resolved or {}).get("name", skills.NONE_SKILL)
+            picked = self._auto_pick(client, model, cleaned, media_summary, log)
+            if picked and all(picked["path"] != s["path"] for s in resolved):
+                picked = dict(picked)
+                picked["include_references"] = False
+                resolved.append(picked)
 
-        # manual
-        name = selector.get("name") or skills.NONE_SKILL
-        resolved = skills.get_skill(name)
-        if name not in (skills.NONE_SKILL, "", None) and not resolved:
-            log.append("找不到技能 '%s'。" % name)
-        return resolved, cleaned, (resolved or {}).get("name", skills.NONE_SKILL)
+        return resolved, cleaned, self._display(resolved)
+
+    @staticmethod
+    def _display(resolved):
+        return " + ".join(s["path"] for s in resolved) or skills.NONE_SKILL
+
+    def _auto_pick(self, client, model, text, media_summary, log):
+        catalog = skills.catalog_text()
+        if not catalog.strip():
+            return None
+        question = (
+            "Available skills:\n%s\n\nUser request: %s\nAttached media: %s"
+            % (catalog, text or "(no text)", media_summary or "none")
+        )
+        try:
+            reply = client.chat(
+                [
+                    {"role": "system", "content": _ROUTE_SYSTEM},
+                    {"role": "user", "content": question},
+                ],
+                params={"temperature": 0.0, "max_tokens": 64},
+                model=model,
+                stream=False,
+            )
+            picked = self._parse_route(reply.get("content", ""))
+        except Exception as exc:
+            log.append("自動路由失敗（%s），只用手動選擇的技能。" % exc)
+            return None
+        if not picked:
+            return None
+        resolved = skills.get_skill(picked)
+        if resolved:
+            log.append("自動追加技能：%s" % resolved["path"])
+            return resolved
+        log.append("模型選了不存在的技能 '%s'。" % picked)
+        return None
 
     @staticmethod
     def _parse_route(text):
@@ -379,10 +410,12 @@ class LlamaPrompter:
         )
         media_summary = media_utils.describe_media(summary)
 
-        # --- skill ------------------------------------------------------
-        resolved_skill, cleaned_text, used_skill = self._resolve_skill(
+        # --- skills (an ordered chain) ----------------------------------
+        chain, cleaned_text, used_skill = self._resolve_skill(
             skill, text, client, model, media_summary, log
         )
+        merged = skills.compose(chain)
+        resolved_skill = merged if chain else None
 
         # --- sampling parameters ---------------------------------------
         request_params = dict(params or {
@@ -414,20 +447,23 @@ class LlamaPrompter:
         else:
             system_parts.append(DEFAULT_SYSTEM)
 
-        if (skill or {}).get("include_references") and resolved_skill:
-            references = skills.load_references(resolved_skill)
+        for item in chain:
+            if not item.get("include_references"):
+                continue
+            references = skills.load_references(item)
             if references:
                 system_parts.append(references)
-                log.append("已附加 %d 個 reference 檔案（%d 字元）"
-                           % (len(resolved_skill.get("ref_files") or []), len(references)))
+                log.append("%s 附加了 %d 個 reference 檔案（%d 字元）"
+                           % (item["path"], len(item.get("ref_files") or []),
+                              len(references)))
 
         extra = (skill or {}).get("extra_instructions", "")
         if extra:
             system_parts.append(extra)
 
+        # The language rule is appended to the user message instead of the
+        # system prompt: buried under a long skill it simply gets ignored.
         language_rule = LANGUAGE_RULES.get(output_language, "")
-        if language_rule:
-            system_parts.append(language_rule)
 
         # --- user message ------------------------------------------------
         user_text = skills.render_user_template(resolved_skill, cleaned_text, media_summary)
@@ -450,6 +486,16 @@ class LlamaPrompter:
                 request_params["max_tokens"] = max(
                     int(request_params.get("max_tokens", 512)), 400 * len(fields)
                 )
+
+        if language_rule:
+            if fields:
+                language_rule += (" This applies to EVERY field value. "
+                                  "Keep the field names themselves in English, "
+                                  "exactly as listed.")
+            # Stated twice on purpose: one mention gets drowned out by a long
+            # English skill such as h3-prompt-writing.
+            system_parts.append(language_rule)
+            user_text = user_text + "\n\n" + language_rule
 
         content = list(media_parts)
         content.append({"type": "text", "text": user_text})
