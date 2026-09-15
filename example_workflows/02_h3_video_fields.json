@@ -1,7 +1,8 @@
 {
   "id": "02_h3_video_fields",
-  "last_node_id": 13,
-  "last_link_id": 12,
+  "revision": 0,
+  "last_node_id": 14,
+  "last_link_id": 13,
   "nodes": [
     {
       "id": 1,
@@ -12,12 +13,85 @@
       ],
       "size": [
         380,
-        250
+        300
       ],
       "flags": {},
       "order": 0,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "base_url",
+          "type": "STRING",
+          "widget": {
+            "name": "base_url"
+          },
+          "link": null
+        },
+        {
+          "name": "model",
+          "type": "STRING",
+          "widget": {
+            "name": "model"
+          },
+          "link": null
+        },
+        {
+          "name": "api_key",
+          "type": "STRING",
+          "widget": {
+            "name": "api_key"
+          },
+          "link": null
+        },
+        {
+          "name": "timeout",
+          "type": "INT",
+          "widget": {
+            "name": "timeout"
+          },
+          "link": null
+        },
+        {
+          "name": "verify_ssl",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "verify_ssl"
+          },
+          "link": null
+        },
+        {
+          "name": "stream",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "stream"
+          },
+          "link": null
+        },
+        {
+          "name": "free_comfy_vram",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "free_comfy_vram"
+          },
+          "link": null
+        },
+        {
+          "name": "keep_alive",
+          "type": "INT",
+          "widget": {
+            "name": "keep_alive"
+          },
+          "link": null
+        },
+        {
+          "name": "use_global_settings",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "use_global_settings"
+          },
+          "link": null
+        }
+      ],
       "outputs": [
         {
           "name": "server",
@@ -48,16 +122,65 @@
       "type": "LlamaSkill",
       "pos": [
         40,
-        330
+        390
       ],
       "size": [
         380,
-        200
+        240
       ],
       "flags": {},
       "order": 1,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "skill",
+          "type": "COMBO",
+          "widget": {
+            "name": "skill"
+          },
+          "link": null
+        },
+        {
+          "name": "mode",
+          "type": "COMBO",
+          "widget": {
+            "name": "mode"
+          },
+          "link": null
+        },
+        {
+          "name": "skill_override",
+          "type": "STRING",
+          "widget": {
+            "name": "skill_override"
+          },
+          "link": null
+        },
+        {
+          "name": "extra_instructions",
+          "type": "STRING",
+          "widget": {
+            "name": "extra_instructions"
+          },
+          "link": null
+        },
+        {
+          "name": "apply_skill_defaults",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "apply_skill_defaults"
+          },
+          "link": null
+        },
+        {
+          "name": "include_references",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "include_references"
+          },
+          "link": null
+        }
+      ],
       "outputs": [
         {
           "name": "skill",
@@ -91,16 +214,113 @@
       "type": "LlamaParams",
       "pos": [
         40,
-        560
+        670
       ],
       "size": [
         380,
-        330
+        390
       ],
       "flags": {},
       "order": 2,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "temperature",
+          "type": "FLOAT",
+          "widget": {
+            "name": "temperature"
+          },
+          "link": null
+        },
+        {
+          "name": "top_p",
+          "type": "FLOAT",
+          "widget": {
+            "name": "top_p"
+          },
+          "link": null
+        },
+        {
+          "name": "top_k",
+          "type": "INT",
+          "widget": {
+            "name": "top_k"
+          },
+          "link": null
+        },
+        {
+          "name": "min_p",
+          "type": "FLOAT",
+          "widget": {
+            "name": "min_p"
+          },
+          "link": null
+        },
+        {
+          "name": "max_tokens",
+          "type": "INT",
+          "widget": {
+            "name": "max_tokens"
+          },
+          "link": null
+        },
+        {
+          "name": "repeat_penalty",
+          "type": "FLOAT",
+          "widget": {
+            "name": "repeat_penalty"
+          },
+          "link": null
+        },
+        {
+          "name": "presence_penalty",
+          "type": "FLOAT",
+          "widget": {
+            "name": "presence_penalty"
+          },
+          "link": null
+        },
+        {
+          "name": "frequency_penalty",
+          "type": "FLOAT",
+          "widget": {
+            "name": "frequency_penalty"
+          },
+          "link": null
+        },
+        {
+          "name": "seed",
+          "type": "INT",
+          "widget": {
+            "name": "seed"
+          },
+          "link": null
+        },
+        {
+          "name": "stop",
+          "type": "STRING",
+          "widget": {
+            "name": "stop"
+          },
+          "link": null
+        },
+        {
+          "name": "json_schema",
+          "type": "STRING",
+          "widget": {
+            "name": "json_schema"
+          },
+          "link": null
+        },
+        {
+          "name": "grammar",
+          "type": "STRING",
+          "widget": {
+            "name": "grammar"
+          },
+          "link": null
+        }
+      ],
       "outputs": [
         {
           "name": "params",
@@ -119,7 +339,7 @@
         0.95,
         40,
         0.05,
-        512,
+        2048,
         1.1,
         0.0,
         0.0,
@@ -135,16 +355,73 @@
       "type": "LlamaMediaOptions",
       "pos": [
         40,
-        920
+        1100
       ],
       "size": [
         380,
-        200
+        240
       ],
       "flags": {},
       "order": 3,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "max_frames",
+          "type": "INT",
+          "widget": {
+            "name": "max_frames"
+          },
+          "link": null
+        },
+        {
+          "name": "frame_sample",
+          "type": "COMBO",
+          "widget": {
+            "name": "frame_sample"
+          },
+          "link": null
+        },
+        {
+          "name": "every_n",
+          "type": "INT",
+          "widget": {
+            "name": "every_n"
+          },
+          "link": null
+        },
+        {
+          "name": "max_image_side",
+          "type": "INT",
+          "widget": {
+            "name": "max_image_side"
+          },
+          "link": null
+        },
+        {
+          "name": "image_format",
+          "type": "COMBO",
+          "widget": {
+            "name": "image_format"
+          },
+          "link": null
+        },
+        {
+          "name": "jpeg_quality",
+          "type": "INT",
+          "widget": {
+            "name": "jpeg_quality"
+          },
+          "link": null
+        },
+        {
+          "name": "max_audio_seconds",
+          "type": "FLOAT",
+          "widget": {
+            "name": "max_audio_seconds"
+          },
+          "link": null
+        }
+      ],
       "outputs": [
         {
           "name": "media_options",
@@ -159,7 +436,7 @@
         "Node name for S&R": "LlamaMediaOptions"
       },
       "widgets_values": [
-        8,
+        4,
         "uniform",
         1,
         768,
@@ -172,17 +449,82 @@
       "id": 5,
       "type": "LlamaVideoSpec",
       "pos": [
-        460,
+        470,
         40
       ],
       "size": [
         360,
-        240
+        300
       ],
       "flags": {},
       "order": 4,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "model_type",
+          "type": "COMBO",
+          "widget": {
+            "name": "model_type"
+          },
+          "link": null
+        },
+        {
+          "name": "duration_seconds",
+          "type": "FLOAT",
+          "widget": {
+            "name": "duration_seconds"
+          },
+          "link": null
+        },
+        {
+          "name": "aspect_ratio",
+          "type": "COMBO",
+          "widget": {
+            "name": "aspect_ratio"
+          },
+          "link": null
+        },
+        {
+          "name": "resolution",
+          "type": "COMBO",
+          "widget": {
+            "name": "resolution"
+          },
+          "link": null
+        },
+        {
+          "name": "custom_aspect",
+          "type": "STRING",
+          "widget": {
+            "name": "custom_aspect"
+          },
+          "link": null
+        },
+        {
+          "name": "fps",
+          "type": "INT",
+          "widget": {
+            "name": "fps"
+          },
+          "link": null
+        },
+        {
+          "name": "audio",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "audio"
+          },
+          "link": null
+        },
+        {
+          "name": "notes",
+          "type": "STRING",
+          "widget": {
+            "name": "notes"
+          },
+          "link": null
+        }
+      ],
       "outputs": [
         {
           "name": "spec",
@@ -217,17 +559,34 @@
       "id": 6,
       "type": "LoadImage",
       "pos": [
-        460,
-        320
+        470,
+        380
       ],
       "size": [
-        300,
-        300
+        310,
+        310
       ],
       "flags": {},
       "order": 5,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "image",
+          "type": "COMBO",
+          "widget": {
+            "name": "image"
+          },
+          "link": null
+        },
+        {
+          "name": "upload",
+          "type": "COMBO",
+          "widget": {
+            "name": "upload"
+          },
+          "link": null
+        }
+      ],
       "outputs": [
         {
           "name": "IMAGE",
@@ -248,7 +607,7 @@
         "Node name for S&R": "LoadImage"
       },
       "widgets_values": [
-        "first.png",
+        "example.png",
         "image"
       ]
     },
@@ -256,17 +615,34 @@
       "id": 7,
       "type": "LoadImage",
       "pos": [
-        460,
-        650
+        470,
+        720
       ],
       "size": [
-        300,
-        300
+        310,
+        310
       ],
       "flags": {},
       "order": 6,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "image",
+          "type": "COMBO",
+          "widget": {
+            "name": "image"
+          },
+          "link": null
+        },
+        {
+          "name": "upload",
+          "type": "COMBO",
+          "widget": {
+            "name": "upload"
+          },
+          "link": null
+        }
+      ],
       "outputs": [
         {
           "name": "IMAGE",
@@ -287,7 +663,7 @@
         "Node name for S&R": "LoadImage"
       },
       "widgets_values": [
-        "last.png",
+        "example.png",
         "image"
       ]
     },
@@ -295,8 +671,8 @@
       "id": 8,
       "type": "LlamaImageSlot",
       "pos": [
-        800,
-        320
+        830,
+        380
       ],
       "size": [
         300,
@@ -310,6 +686,22 @@
           "name": "image",
           "type": "IMAGE",
           "link": 3
+        },
+        {
+          "name": "role",
+          "type": "COMBO",
+          "widget": {
+            "name": "role"
+          },
+          "link": null
+        },
+        {
+          "name": "custom_label",
+          "type": "STRING",
+          "widget": {
+            "name": "custom_label"
+          },
+          "link": null
         },
         {
           "name": "chain",
@@ -339,8 +731,8 @@
       "id": 9,
       "type": "LlamaImageSlot",
       "pos": [
-        800,
-        490
+        830,
+        560
       ],
       "size": [
         300,
@@ -354,6 +746,22 @@
           "name": "image",
           "type": "IMAGE",
           "link": 4
+        },
+        {
+          "name": "role",
+          "type": "COMBO",
+          "widget": {
+            "name": "role"
+          },
+          "link": null
+        },
+        {
+          "name": "custom_label",
+          "type": "STRING",
+          "widget": {
+            "name": "custom_label"
+          },
+          "link": null
         },
         {
           "name": "chain",
@@ -383,12 +791,12 @@
       "id": 10,
       "type": "LlamaVideoPrompter",
       "pos": [
-        1140,
+        1160,
         40
       ],
       "size": [
         500,
-        560
+        600
       ],
       "flags": {},
       "order": 9,
@@ -398,6 +806,22 @@
           "name": "server",
           "type": "LLAMA_SERVER",
           "link": 1
+        },
+        {
+          "name": "text",
+          "type": "STRING",
+          "widget": {
+            "name": "text"
+          },
+          "link": null
+        },
+        {
+          "name": "output_language",
+          "type": "COMBO",
+          "widget": {
+            "name": "output_language"
+          },
+          "link": null
         },
         {
           "name": "spec",
@@ -443,6 +867,62 @@
           "name": "skill",
           "type": "LLAMA_SKILL",
           "link": 9
+        },
+        {
+          "name": "system_prompt",
+          "type": "STRING",
+          "widget": {
+            "name": "system_prompt"
+          },
+          "link": null
+        },
+        {
+          "name": "prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "prefix"
+          },
+          "link": null
+        },
+        {
+          "name": "suffix",
+          "type": "STRING",
+          "widget": {
+            "name": "suffix"
+          },
+          "link": null
+        },
+        {
+          "name": "strip_thinking",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "strip_thinking"
+          },
+          "link": null
+        },
+        {
+          "name": "strip_quotes",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "strip_quotes"
+          },
+          "link": null
+        },
+        {
+          "name": "force_json",
+          "type": "BOOLEAN",
+          "widget": {
+            "name": "force_json"
+          },
+          "link": null
+        },
+        {
+          "name": "extra_fields",
+          "type": "STRING",
+          "widget": {
+            "name": "extra_fields"
+          },
+          "link": null
         }
       ],
       "outputs": [
@@ -453,36 +933,30 @@
           "slot_index": 0
         },
         {
-          "name": "integrated_multimodal_description",
-          "type": "STRING",
-          "links": [
-            10
-          ],
-          "slot_index": 1
-        },
-        {
           "name": "subject_definitions",
           "type": "STRING",
           "links": [],
-          "slot_index": 2
+          "slot_index": 1
         },
         {
           "name": "summary",
           "type": "STRING",
           "links": [],
-          "slot_index": 3
+          "slot_index": 2
         },
         {
           "name": "retention_analysis",
           "type": "STRING",
           "links": [],
-          "slot_index": 4
+          "slot_index": 3
         },
         {
-          "name": "detailed_description",
+          "name": "description",
           "type": "STRING",
-          "links": [],
-          "slot_index": 5
+          "links": [
+            10
+          ],
+          "slot_index": 4
         },
         {
           "name": "overall_soundscape",
@@ -490,7 +964,7 @@
           "links": [
             11
           ],
-          "slot_index": 6
+          "slot_index": 5
         },
         {
           "name": "non_diegetic_music",
@@ -498,13 +972,15 @@
           "links": [
             12
           ],
-          "slot_index": 7
+          "slot_index": 6
         },
         {
           "name": "info",
           "type": "STRING",
-          "links": [],
-          "slot_index": 8
+          "links": [
+            13
+          ],
+          "slot_index": 7
         }
       ],
       "properties": {
@@ -526,12 +1002,12 @@
       "id": 11,
       "type": "LlamaPreviewText",
       "pos": [
-        1690,
+        1710,
         40
       ],
       "size": [
         400,
-        240
+        260
       ],
       "flags": {},
       "order": 10,
@@ -555,18 +1031,18 @@
         "Node name for S&R": "LlamaPreviewText"
       },
       "widgets_values": [],
-      "title": "integrated_multimodal_description"
+      "title": "description"
     },
     {
       "id": 12,
       "type": "LlamaPreviewText",
       "pos": [
-        1690,
-        320
+        1710,
+        330
       ],
       "size": [
         400,
-        180
+        190
       ],
       "flags": {},
       "order": 11,
@@ -596,12 +1072,12 @@
       "id": 13,
       "type": "LlamaPreviewText",
       "pos": [
-        1690,
-        540
+        1710,
+        550
       ],
       "size": [
         400,
-        180
+        190
       ],
       "flags": {},
       "order": 12,
@@ -626,6 +1102,41 @@
       },
       "widgets_values": [],
       "title": "non_diegetic_music"
+    },
+    {
+      "id": 14,
+      "type": "LlamaPreviewText",
+      "pos": [
+        1710,
+        770
+      ],
+      "size": [
+        400,
+        220
+      ],
+      "flags": {},
+      "order": 13,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "link": 13
+        }
+      ],
+      "outputs": [
+        {
+          "name": "text",
+          "type": "STRING",
+          "links": [],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LlamaPreviewText"
+      },
+      "widgets_values": [],
+      "title": "info"
     }
   ],
   "links": [
@@ -642,7 +1153,7 @@
       5,
       0,
       10,
-      1,
+      3,
       "LLAMA_SPEC"
     ],
     [
@@ -666,7 +1177,7 @@
       8,
       0,
       9,
-      1,
+      3,
       "LLAMA_IMAGES"
     ],
     [
@@ -674,7 +1185,7 @@
       9,
       0,
       10,
-      4,
+      6,
       "LLAMA_IMAGES"
     ],
     [
@@ -682,7 +1193,7 @@
       3,
       0,
       10,
-      7,
+      9,
       "LLAMA_PARAMS"
     ],
     [
@@ -690,7 +1201,7 @@
       4,
       0,
       10,
-      8,
+      10,
       "LLAMA_MEDIA"
     ],
     [
@@ -698,30 +1209,38 @@
       2,
       0,
       10,
-      9,
+      11,
       "LLAMA_SKILL"
     ],
     [
       10,
       10,
-      1,
+      4,
       11,
       0,
       "STRING"
     ],
     [
       11,
+      10,
+      5,
+      12,
+      0,
+      "STRING"
+    ],
+    [
+      12,
       10,
       6,
-      12,
+      13,
       0,
       "STRING"
     ],
     [
-      12,
+      13,
       10,
       7,
-      13,
+      14,
       0,
       "STRING"
     ]

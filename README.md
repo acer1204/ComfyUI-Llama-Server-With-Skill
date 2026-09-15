@@ -21,6 +21,18 @@ prompt 裡用一行指令即時切換。
 
 ---
 
+## 範例工作流
+
+`example_workflows/` 裡的檔案可以直接拖進 ComfyUI：
+
+| 檔案 | 內容 |
+| --- | --- |
+| `01_image_to_prompt.json` | 一張圖 → 一則提示詞，技能可用 `/skill` 切換 |
+| `02_h3_video_fields.json` | FL2VA，首幀＋尾幀 → 三個欄位 |
+| `03_h3_ref2va_six_fields.json` | Ref2VA，兩張參考圖 → 六個欄位 |
+
+---
+
 ## 安裝
 
 ```bash
@@ -146,9 +158,24 @@ ComfyUI 設定面板 → **Llama Prompter → Skills → Manage skills**，可�
 | T2VA / I2VA / FL2VA / L2VA | `integrated_multimodal_description`、`overall_soundscape`、`non_diegetic_music` |
 | Ref2VA | `subject_definitions`、`summary`、`retention_analysis`、`detailed_description`、`overall_soundscape`、`non_diegetic_music` |
 
-每個欄位都是獨立的 STRING 輸出，`full_prompt` 則是全部合併。
+節點固定有八個輸出：
+
+```
+full_prompt            全部欄位合併成一段文字
+subject_definitions    Ref2VA 專用，其他模式為空
+summary                Ref2VA 專用，其他模式為空
+retention_analysis     Ref2VA 專用，其他模式為空
+description            Ref2VA 給 detailed_description，其他模式給 integrated_multimodal_description
+overall_soundscape     兩組模式都有
+non_diegetic_music     兩組模式都有
+info                   統計資訊
+```
+
+`description` 這條刻意合併，所以你在 T2VA 和 Ref2VA 之間切換時，下游接線不用重接。
+
 `force_json` 預設開啟，會用 JSON Schema 逼模型填滿所有欄位；關掉則改用
-`欄位名: 內容` 的寬鬆解析。`extra_fields` 可以再加自訂欄位名稱（逗號分隔）。
+`欄位名: 內容` 的寬鬆解析。`extra_fields` 可以再加自訂欄位名稱（逗號分隔），
+再用 `Llama 取出欄位` 節點依名稱取值。
 
 影像要用 `Llama 影像插槽` 標好角色，模型才知道哪張是首幀、哪張是尾幀：
 

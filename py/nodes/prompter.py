@@ -552,25 +552,24 @@ class LlamaVideoPrompter(LlamaPrompter):
         })
         return spec
 
-    RETURN_TYPES = ("STRING",) * 9
+    RETURN_TYPES = ("STRING",) * 8
     RETURN_NAMES = (
         "full_prompt",
-        "integrated_multimodal_description",
         "subject_definitions",
         "summary",
         "retention_analysis",
-        "detailed_description",
+        "description",
         "overall_soundscape",
         "non_diegetic_music",
         "info",
     )
     OUTPUT_TOOLTIPS = (
         "所有欄位合併成一段文字。",
-        "T2VA / I2VA / FL2VA / L2VA 的主描述欄位。",
-        "Ref2VA：參考主體定義。",
-        "Ref2VA：摘要。",
-        "Ref2VA：保留分析。",
-        "Ref2VA：細節描述。",
+        "Ref2VA：參考主體定義。其他模式為空。",
+        "Ref2VA：摘要。其他模式為空。",
+        "Ref2VA：保留分析。其他模式為空。",
+        "主描述。Ref2VA 給 detailed_description，"
+        "其他模式給 integrated_multimodal_description，接線不用跟著模式換。",
         "環境音描述。",
         "配樂描述。",
         "本次請求的統計資訊。",
@@ -602,13 +601,16 @@ class LlamaVideoPrompter(LlamaPrompter):
             "%s: %s" % (name, values[name]) for name in fields if values.get(name)
         ) or outcome["prompt"]
 
+        # One "description" line so downstream wiring survives a mode change.
+        description = (values.get("detailed_description")
+                       or values.get("integrated_multimodal_description", ""))
+
         ordered = (
             full,
-            values.get("integrated_multimodal_description", ""),
             values.get("subject_definitions", ""),
             values.get("summary", ""),
             values.get("retention_analysis", ""),
-            values.get("detailed_description", ""),
+            description,
             values.get("overall_soundscape", ""),
             values.get("non_diegetic_music", ""),
             info,
