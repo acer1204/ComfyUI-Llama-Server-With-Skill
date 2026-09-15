@@ -9,10 +9,12 @@ from .connection import (
     LlamaVideoSpec,
     LlamaImageSlot,
 )
+from .aio import LlamaPromptAIO
 from .prompter import LlamaPrompter, LlamaVideoPrompter
 from .utils import LlamaPreviewText, LlamaTestConnection, LlamaSectionGet
 
 NODE_CLASS_MAPPINGS = {
+    "LlamaPromptAIO": LlamaPromptAIO,
     "LlamaServer": LlamaServer,
     "LlamaParams": LlamaParams,
     "LlamaMediaOptions": LlamaMediaOptions,
@@ -28,6 +30,7 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    "LlamaPromptAIO": "Llama Prompter AIO",
     "LlamaServer": "Llama Server 連線",
     "LlamaParams": "Llama 取樣參數",
     "LlamaMediaOptions": "Llama 影像/影片選項",

@@ -1,6 +1,6 @@
 """Small helper nodes."""
 
-CATEGORY = "Llama Prompter"
+CATEGORY = "Llama Prompter/advanced"
 
 
 class LlamaPreviewText:

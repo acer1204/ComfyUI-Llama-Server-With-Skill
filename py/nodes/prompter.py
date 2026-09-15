@@ -6,7 +6,7 @@ import time
 
 from .. import config, llama_client, media as media_utils, skills, vram
 
-CATEGORY = "Llama Prompter"
+CATEGORY = "Llama Prompter/advanced"
 
 LANGUAGES = ["English", "繁體中文", "简体中文", "日本語", "same as input", "auto"]
 
@@ -375,7 +375,8 @@ class LlamaPrompter:
                  video=None, audio=None, params=None, media_options=None, skill=None,
                  system_prompt="", prefix="", suffix="", strip_thinking=True,
                  strip_quotes=True, single_line=False, max_chars=0, node_id=None,
-                 image_slots=None, spec=None, fields=None, force_json=False):
+                 image_slots=None, spec=None, fields=None, force_json=False,
+                 extra_parts=None, system_prefix=""):
 
         started = time.time()
         log = []
@@ -439,6 +440,11 @@ class LlamaPrompter:
 
         # --- system prompt ---------------------------------------------
         system_parts = []
+        prefix = (system_prefix or "").strip()
+        if prefix:
+            # Sits in front of the skills rather than replacing them.
+            system_parts.append(prefix)
+
         override = (system_prompt or "").strip()
         if override:
             system_parts.append(override)
@@ -497,7 +503,7 @@ class LlamaPrompter:
             system_parts.append(language_rule)
             user_text = user_text + "\n\n" + language_rule
 
-        content = list(media_parts)
+        content = list(media_parts) + list(extra_parts or [])
         content.append({"type": "text", "text": user_text})
 
         messages = [

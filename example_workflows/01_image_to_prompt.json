@@ -109,7 +109,7 @@
         "https://g00392.asuscomm.com:10011",
         "",
         "",
-        300,
+        900,
         true,
         true,
         false,
@@ -344,7 +344,7 @@
         0.95,
         40,
         0.05,
-        512,
+        1200,
         1.1,
         0.0,
         0.0,
@@ -441,10 +441,10 @@
         "Node name for S&R": "LlamaMediaOptions"
       },
       "widgets_values": [
-        8,
+        4,
         "uniform",
         1,
-        768,
+        640,
         "jpeg",
         85,
         60.0

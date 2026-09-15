@@ -233,6 +233,88 @@ def build_labeled_parts(slots, opts):
     return parts, labels, payload
 
 
+def clip_video(pils, frame_rate, max_seconds):
+    """Trim a frame list to ``max_seconds``; returns ``(frames, note)``."""
+    if not pils or not max_seconds or max_seconds <= 0:
+        return pils, ""
+    rate = float(frame_rate) if frame_rate else 0.0
+    if rate <= 0:
+        return pils, ""
+    allowed = int(round(rate * max_seconds))
+    if allowed <= 0 or len(pils) <= allowed:
+        return pils, ""
+    note = "影片超過 %.0f 秒，只取前 %.1f 秒（%d/%d 幀）" % (
+        max_seconds, allowed / rate, allowed, len(pils))
+    return pils[:allowed], note
+
+
+def build_clip_parts(videos, opts):
+    """Sample several VIDEO inputs, honouring the per-clip second limit."""
+    max_frames = int(opts.get("max_frames", 8))
+    max_side = int(opts.get("max_image_side", 768))
+    image_format = opts.get("image_format", "jpeg")
+    quality = int(opts.get("jpeg_quality", 85))
+    mode = opts.get("frame_sample", "uniform")
+    every_n = int(opts.get("every_n", 1))
+    max_seconds = float(opts.get("max_video_seconds", 0) or 0)
+
+    parts = []
+    notes = []
+    payload = 0
+    total_frames = 0
+    for index, video in enumerate(videos or []):
+        if video is None:
+            continue
+        pils, rate = video_to_pils(video)
+        if not pils:
+            continue
+        pils, note = clip_video(pils, rate, max_seconds)
+        if note:
+            notes.append("video_%d: %s" % (index + 1, note))
+        chosen, _ = sample_frames(pils, max_frames, mode, every_n)
+        label = "video_%d" % (index + 1)
+        parts.append({"type": "text", "text": "[%s]" % label})
+        for pil in chosen:
+            part, size = image_content_part(pil, image_format, quality, max_side)
+            parts.append(part)
+            payload += size
+        total_frames += len(chosen)
+    return parts, total_frames, payload, notes
+
+
+def build_audio_parts(audios, opts):
+    """Encode several AUDIO inputs, capped at a shared total duration."""
+    budget = float(opts.get("max_audio_seconds_total", 0) or 0)
+    if budget <= 0:
+        budget = float(opts.get("max_audio_seconds", 60) or 60)
+
+    parts = []
+    notes = []
+    payload = 0
+    seconds = 0.0
+    for index, audio in enumerate(audios or []):
+        if audio is None:
+            continue
+        remaining = budget - seconds
+        if remaining <= 0.05:
+            notes.append("audio_%d 略過：已達 %.0f 秒總長上限" % (index + 1, budget))
+            continue
+        part, size = audio_content_part(audio, remaining)
+        if not part:
+            continue
+        try:
+            rate = float(audio.get("sample_rate", 16000))
+            length = audio.get("waveform").shape[-1]
+            used = min(length / rate, remaining)
+        except Exception:
+            used = remaining
+        parts.append({"type": "text", "text": "[audio_%d]" % (index + 1)})
+        parts.append(part)
+        payload += size
+        seconds += used
+    return parts, round(seconds, 2), payload, notes
+
+
 def build_media_parts(images=None, video=None, audio=None, opts=None, slots=None):
     """Return ``(content_parts, summary_dict)`` for the given ComfyUI inputs."""
     opts = opts or {}

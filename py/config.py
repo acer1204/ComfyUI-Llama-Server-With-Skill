@@ -38,6 +38,17 @@ DEFAULT_CONFIG = {
     "max_image_side": 768,
     "image_format": "jpeg",
     "jpeg_quality": 85,
+    # --- AIO limits ---------------------------------------------------------
+    "max_images": 9,
+    "max_videos": 3,
+    "max_audios": 3,
+    "max_skills": 5,
+    "include_references": False,
+    "max_video_seconds": 15.0,
+    "max_audio_seconds_total": 15.0,
+    "resolution": "Native (ShortEdge 768px)",
+    # --- reusable system prompts shown in the AIO node ----------------------
+    "system_prompts": [],
     # --- behaviour ----------------------------------------------------------
     "stream": True,
     "strip_thinking": True,

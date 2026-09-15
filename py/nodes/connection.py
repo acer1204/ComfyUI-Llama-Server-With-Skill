@@ -2,7 +2,7 @@
 
 from .. import config, skills
 
-CATEGORY = "Llama Prompter"
+CATEGORY = "Llama Prompter/advanced"
 
 FORMATS = ["jpeg", "png", "webp"]
 

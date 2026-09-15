@@ -321,6 +321,151 @@ function openSkillManager() {
 }
 
 /* ------------------------------------------------------------------ */
+/* system prompt manager                                               */
+/* ------------------------------------------------------------------ */
+async function listPresets() {
+  const response = await api.fetchApi(`${PREFIX}/presets`);
+  return (await response.json()).presets || [];
+}
+
+async function savePreset(name, text) {
+  const response = await api.fetchApi(`${PREFIX}/preset`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, text }),
+  });
+  return await response.json();
+}
+
+async function deletePreset(name) {
+  const response = await api.fetchApi(`${PREFIX}/preset?name=${encodeURIComponent(name)}`, {
+    method: "DELETE",
+  });
+  return await response.json();
+}
+
+function openPresetManager() {
+  const overlay = el("div", {
+    position: "fixed", inset: "0", background: "rgba(0,0,0,.55)",
+    zIndex: "10000", display: "flex", alignItems: "center", justifyContent: "center",
+  });
+  const panel = el("div", {
+    background: "var(--comfy-menu-bg, #202020)", color: "var(--fg-color, #ddd)",
+    width: "min(760px, 92vw)", height: "min(560px, 88vh)", borderRadius: "10px",
+    display: "flex", flexDirection: "column", boxShadow: "0 12px 40px rgba(0,0,0,.5)",
+    font: "13px/1.5 system-ui, sans-serif", overflow: "hidden",
+  });
+
+  const header = el("div", {
+    display: "flex", alignItems: "center", gap: "8px",
+    padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,.12)",
+  });
+  header.appendChild(el("strong", { fontSize: "15px", flex: "1" },
+    "Llama Prompter — System prompts"));
+  const newButton = el("button", {}, "新增");
+  const closeButton = el("button", {}, "關閉");
+  for (const button of [newButton, closeButton]) {
+    Object.assign(button.style, {
+      padding: "5px 12px", cursor: "pointer", borderRadius: "5px",
+      border: "1px solid rgba(255,255,255,.2)", background: "rgba(255,255,255,.07)",
+      color: "inherit", font: "inherit",
+    });
+    header.appendChild(button);
+  }
+
+  const body = el("div", { display: "flex", flex: "1", minHeight: "0" });
+  const list = el("div", {
+    width: "220px", overflowY: "auto", borderRight: "1px solid rgba(255,255,255,.12)",
+  });
+  const right = el("div", { flex: "1", display: "flex", flexDirection: "column", minWidth: "0" });
+
+  const bar = el("div", {
+    display: "flex", gap: "8px", padding: "8px 12px",
+    borderBottom: "1px solid rgba(255,255,255,.12)",
+  });
+  const nameInput = el("input", {
+    flex: "1", padding: "5px 8px", borderRadius: "5px", font: "inherit",
+    border: "1px solid rgba(255,255,255,.18)", background: "rgba(0,0,0,.25)",
+    color: "inherit", outline: "none",
+  });
+  nameInput.placeholder = "名稱";
+  const saveButton = el("button", {}, "儲存");
+  const deleteButton = el("button", {}, "刪除");
+  for (const button of [saveButton, deleteButton]) {
+    Object.assign(button.style, {
+      padding: "4px 12px", cursor: "pointer", borderRadius: "5px",
+      border: "1px solid rgba(255,255,255,.2)", background: "rgba(255,255,255,.07)",
+      color: "inherit", font: "inherit",
+    });
+  }
+  bar.append(nameInput, saveButton, deleteButton);
+
+  const editor = el("textarea", {
+    flex: "1", width: "100%", boxSizing: "border-box", resize: "none", border: "0",
+    padding: "12px", background: "rgba(0,0,0,.25)", color: "inherit",
+    font: "12px/1.6 ui-monospace, Consolas, monospace", outline: "none",
+  });
+  editor.placeholder = "系統提示內容…";
+
+  right.append(bar, editor);
+  body.append(list, right);
+  panel.append(header, body);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  function close() {
+    overlay.remove();
+    app.refreshComboInNodes?.();
+  }
+  closeButton.onclick = close;
+  overlay.onclick = (event) => { if (event.target === overlay) close(); };
+  newButton.onclick = () => { nameInput.value = ""; editor.value = ""; nameInput.focus(); };
+
+  async function reload(select) {
+    const items = await listPresets();
+    list.innerHTML = "";
+    for (const item of items) {
+      const row = el("div", {
+        padding: "8px 12px", cursor: "pointer", fontSize: "12.5px",
+        borderBottom: "1px solid rgba(255,255,255,.06)",
+      }, item.name);
+      if (item.builtin) {
+        row.appendChild(el("span", {
+          marginLeft: "6px", fontSize: "10px", padding: "1px 5px",
+          borderRadius: "3px", background: "rgba(120,170,255,.22)",
+        }, "內建"));
+      }
+      row.title = item.text;
+      row.onclick = () => {
+        nameInput.value = item.name;
+        editor.value = item.text;
+        for (const child of list.children) child.style.background = "";
+        row.style.background = "rgba(255,255,255,.1)";
+      };
+      if (select && item.name === select) setTimeout(() => row.click(), 0);
+      list.appendChild(row);
+    }
+  }
+
+  saveButton.onclick = async () => {
+    const result = await savePreset(nameInput.value, editor.value);
+    if (result.error) return toast(result.error, "error");
+    toast(`已儲存 ${nameInput.value}`, "success");
+    await reload(nameInput.value);
+  };
+  deleteButton.onclick = async () => {
+    if (!nameInput.value.trim()) return;
+    if (!confirm(`確定刪除「${nameInput.value}」？`)) return;
+    await deletePreset(nameInput.value);
+    nameInput.value = "";
+    editor.value = "";
+    await reload();
+  };
+
+  reload();
+}
+
+/* ------------------------------------------------------------------ */
 /* settings                                                            */
 /* ------------------------------------------------------------------ */
 function makeButton(label, onClick) {
@@ -429,6 +574,36 @@ app.registerExtension({
       category: [...CATEGORY_SKILLS, "Manage skills"],
       type: makeButton("開啟 Skill 管理器", openSkillManager),
     },
+
+    {
+      id: "LlamaPrompter.manage_presets",
+      name: "System prompts",
+      category: ["Llama Prompter", "System prompts", "Manage"],
+      type: makeButton("開啟 System prompt 管理器", openPresetManager),
+    },
+    {
+      id: "LlamaPrompter.dynamic_slots",
+      name: "Grow AIO slots as you connect",
+      category: ["Llama Prompter", "AIO", "Grow slots"],
+      type: "boolean",
+      defaultValue: true,
+      tooltip: "AIO 節點只顯示已接的插槽加一個備用。關掉會一次顯示全部。",
+    },
+    setting("LlamaPrompter.max_images", "max_images", "Max images", "number", 9,
+      ["Llama Prompter", "AIO"], { tooltip: "改完要按 R 重新整理節點定義。" }),
+    setting("LlamaPrompter.max_videos", "max_videos", "Max videos", "number", 3,
+      ["Llama Prompter", "AIO"]),
+    setting("LlamaPrompter.max_audios", "max_audios", "Max audio clips", "number", 3,
+      ["Llama Prompter", "AIO"]),
+    setting("LlamaPrompter.max_skills", "max_skills", "Max skills", "number", 5,
+      ["Llama Prompter", "AIO"]),
+    setting("LlamaPrompter.include_references", "include_references",
+      "Send skill references", "boolean", false, ["Llama Prompter", "AIO"],
+      { tooltip: "把技能的 references/ 一起送出。更貼近原技能，但 prompt 會大很多也慢很多。" }),
+    setting("LlamaPrompter.max_video_seconds", "max_video_seconds",
+      "Max seconds per video", "number", 15, ["Llama Prompter", "AIO"]),
+    setting("LlamaPrompter.max_audio_seconds_total", "max_audio_seconds_total",
+      "Max audio seconds total", "number", 15, ["Llama Prompter", "AIO"]),
   ],
 
   commands: [
@@ -467,6 +642,13 @@ app.registerExtension({
         "LlamaPrompter.strip_thinking": "strip_thinking",
         "LlamaPrompter.debug": "debug",
         "LlamaPrompter.default_skill": "default_skill",
+        "LlamaPrompter.max_images": "max_images",
+        "LlamaPrompter.max_videos": "max_videos",
+        "LlamaPrompter.max_audios": "max_audios",
+        "LlamaPrompter.max_skills": "max_skills",
+        "LlamaPrompter.include_references": "include_references",
+        "LlamaPrompter.max_video_seconds": "max_video_seconds",
+        "LlamaPrompter.max_audio_seconds_total": "max_audio_seconds_total",
       };
       const put = async (id, value) => {
         if (value === undefined) return;
@@ -501,6 +683,146 @@ app.registerExtension({
         app.graph.setDirtyCanvas(true, false);
       }
     });
+  },
+});
+
+/* ------------------------------------------------------------------ */
+/* AIO node: slots that appear as you fill them                        */
+/* ------------------------------------------------------------------ */
+const GROWABLE_INPUTS = ["image_", "video_", "audio_"];
+const GROWABLE_WIDGETS = ["skill_"];
+const NONE_SKILL = "(none)";
+
+function numbered(items, prefix) {
+  return items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => new RegExp(`^${prefix}\\d+$`).test(item.name))
+    .sort((a, b) => Number(a.item.name.slice(prefix.length)) - Number(b.item.name.slice(prefix.length)));
+}
+
+function growablePrefix(name) {
+  return GROWABLE_INPUTS.find((prefix) => new RegExp(`^${prefix}\\d+$`).test(name)) || null;
+}
+
+function hideWidget(node, widget) {
+  if (widget.llamaHidden) return;
+  widget.llamaHidden = true;
+  widget.llamaType = widget.type;
+  widget.llamaCompute = widget.computeSize;
+  widget.type = "llamaHidden";
+  widget.computeSize = () => [0, -4];
+}
+
+function showWidget(widget) {
+  if (!widget.llamaHidden) return;
+  widget.llamaHidden = false;
+  widget.type = widget.llamaType;
+  widget.computeSize = widget.llamaCompute;
+}
+
+/** Keep every filled slot plus exactly one spare.
+ *
+ * Only unconnected slots are ever removed, and removal goes through
+ * litegraph's own removeInput so link indices are fixed up for us. A connected
+ * slot is never touched, so this can not rewire anything.
+ */
+function growSlots(node) {
+  if (!node || node.llamaNoGrow) return;
+  const catalogue = node.llamaAllInputs || [];
+  if (!catalogue.length) return;
+
+  const connected = new Set();
+  for (const slot of node.inputs || []) {
+    if (slot.link != null) connected.add(slot.name);
+  }
+
+  const wanted = new Set();
+  for (const slot of catalogue) {
+    if (!growablePrefix(slot.name)) wanted.add(slot.name);
+  }
+  for (const name of connected) wanted.add(name);
+  for (const prefix of GROWABLE_INPUTS) {
+    const names = catalogue
+      .filter((slot) => new RegExp(`^${prefix}\\d+$`).test(slot.name))
+      .map((slot) => slot.name);
+    let lastUsed = -1;
+    names.forEach((name, position) => { if (connected.has(name)) lastUsed = position; });
+    const spare = names[lastUsed + 1];
+    if (spare) wanted.add(spare);
+  }
+
+  for (let index = (node.inputs || []).length - 1; index >= 0; index--) {
+    const slot = node.inputs[index];
+    if (slot.link == null && growablePrefix(slot.name) && !wanted.has(slot.name)) {
+      node.removeInput(index);
+    }
+  }
+  const present = new Set((node.inputs || []).map((slot) => slot.name));
+  for (const slot of catalogue) {
+    if (wanted.has(slot.name) && !present.has(slot.name)) {
+      node.addInput(slot.name, slot.type);
+    }
+  }
+
+  for (const prefix of GROWABLE_WIDGETS) {
+    const widgets = numbered(node.widgets || [], prefix);
+    if (!widgets.length) continue;
+    let lastUsed = -1;
+    widgets.forEach(({ item }, position) => {
+      if (item.value && item.value !== NONE_SKILL) lastUsed = position;
+    });
+    const keep = Math.min(lastUsed + 2, widgets.length);
+    widgets.forEach(({ item }, position) => {
+      if (position < keep) showWidget(item);
+      else hideWidget(node, item);
+    });
+  }
+
+  node.setSize(node.computeSize());
+  node.setDirtyCanvas(true, true);
+}
+
+app.registerExtension({
+  name: "LlamaPrompter.AIO",
+
+  async beforeRegisterNodeDef(nodeType, nodeData) {
+    if (nodeData?.name !== "LlamaPromptAIO") return;
+
+    // Remember the full slot list so hidden ones can come back.
+    const onCreated = nodeType.prototype.onNodeCreated;
+    nodeType.prototype.onNodeCreated = function () {
+      const result = onCreated?.apply(this, arguments);
+      // The full slot list, so a removed spare can be added back later.
+      this.llamaAllInputs = (this.inputs || []).map(({ name, type }) => ({ name, type }));
+      this.llamaNoGrow = app.ui.settings.getSettingValue("LlamaPrompter.dynamic_slots") === false;
+      for (const prefix of GROWABLE_WIDGETS) {
+        for (const { item } of numbered(this.widgets || [], prefix)) {
+          const node = this;
+          const original = item.callback;
+          item.callback = function () {
+            const value = original?.apply(this, arguments);
+            growSlots(node);
+            return value;
+          };
+        }
+      }
+      requestAnimationFrame(() => growSlots(this));
+      return result;
+    };
+
+    const onConfigure = nodeType.prototype.onConfigure;
+    nodeType.prototype.onConfigure = function () {
+      const result = onConfigure?.apply(this, arguments);
+      requestAnimationFrame(() => growSlots(this));
+      return result;
+    };
+
+    const onConnectionsChange = nodeType.prototype.onConnectionsChange;
+    nodeType.prototype.onConnectionsChange = function () {
+      const result = onConnectionsChange?.apply(this, arguments);
+      requestAnimationFrame(() => growSlots(this));
+      return result;
+    };
   },
 });
 

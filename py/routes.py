@@ -6,7 +6,7 @@ import os
 import shutil
 import zipfile
 
-from . import config, llama_client, skills
+from . import config, llama_client, presets, skills
 
 PREFIX = "/llama_prompter"
 
@@ -211,6 +211,31 @@ def register(server_instance=None):
                 found.values(),
                 key=lambda s: ((s.get("group") or "").lower(), s["name"].lower()))],
         })
+
+    # -- system prompt presets -------------------------------------------
+    @routes.get(PREFIX + "/presets")
+    async def get_presets(request):
+        return _json({"presets": presets.all_presets()})
+
+    @routes.post(PREFIX + "/preset")
+    async def post_preset(request):
+        try:
+            body = await request.json()
+        except Exception:
+            return _json({"error": "invalid JSON body"}, 400)
+        try:
+            items = presets.save(body.get("name"), body.get("text"))
+        except ValueError as exc:
+            return _json({"error": str(exc)}, 400)
+        except Exception as exc:
+            return _json({"error": str(exc)}, 500)
+        return _json({"ok": True, "presets": presets.all_presets(), "stored": len(items)})
+
+    @routes.delete(PREFIX + "/preset")
+    async def delete_preset(request):
+        name = request.query.get("name", "")
+        presets.delete(name)
+        return _json({"ok": True, "presets": presets.all_presets()})
 
     # -- connection test --------------------------------------------------
     @routes.post(PREFIX + "/test")

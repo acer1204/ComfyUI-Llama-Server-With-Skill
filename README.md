@@ -14,6 +14,7 @@ prompt 裡用一行指令即時切換。
 - 音訊輸入：需要模型支援（Qwen2-Audio、Ultravox 等）
 - 角色標記影像：`first_frame` / `last_frame` / `reference` / 自訂標籤，可串接任意多張
 - 完整取樣參數，附常用預設值；支援 JSON Schema 與 GBNF 文法
+- 一個 AIO 節點包辦全部，插槽隨接線長出來，連線與取樣參數收在設定面板
 - 技能系統：內建 29 個，依群組分類，可串接多個，可在設定面板匯入 `.md` / `.zip`，或用 `/skill 名稱` 切換
 - 影片規格節點：秒數 0–15、畫面比例、解析度、模式（T2VA / I2VA / FL2VA / L2VA / Ref2VA）
 - 結構化多輸出：H3 風格的欄位各自成為獨立的 STRING 輸出
@@ -27,9 +28,11 @@ prompt 裡用一行指令即時切換。
 
 | 檔案 | 內容 |
 | --- | --- |
-| `01_image_to_prompt.json` | 一張圖 → 一則提示詞，技能可用 `/skill` 切換 |
-| `02_h3_video_fields.json` | FL2VA，首幀＋尾幀 → 三個欄位 |
-| `03_h3_ref2va_six_fields.json` | Ref2VA，兩張參考圖 → 六個欄位 |
+| `00_aio_single_node.json` | **從這裡開始。** 一個 AIO 節點，一張圖 → 一則提示詞 |
+| `04_aio_ref2va.json` | AIO 節點跑 Ref2VA，兩張參考圖 → 六個欄位 |
+| `01_image_to_prompt.json` | 進階拆解版：一張圖 → 一則提示詞 |
+| `02_h3_video_fields.json` | 進階拆解版：FL2VA，首幀＋尾幀 → 三個欄位 |
+| `03_h3_ref2va_six_fields.json` | 進階拆解版：Ref2VA → 六個欄位 |
 
 ---
 
@@ -57,28 +60,55 @@ llama-server -m model.gguf --mmproj mmproj.gguf --host 0.0.0.0 --port 8080 -c 32
 
 ## 節點
 
+日常只需要一個：**Llama Prompter AIO**。
+
+```
+LoadImage ─→ image_1 ─→ Llama Prompter AIO ─→ full_prompt ─→ CLIP Text Encode
+```
+
+連線位址、取樣參數、抽幀設定都在 ComfyUI 設定面板，節點上只留每次會改的東西：
+
+| 欄位 | 說明 |
+| --- | --- |
+| `text` | 你的補充內容。也可以像 webui 那樣自己一行寫 `/技能名稱` |
+| `mode` | `plain` 只輸出一則提示詞；`T2VA` / `I2VA` / `FL2VA` / `L2VA` / `Ref2VA` 走 H3 分欄位 |
+| `system_prompt` | 從設定面板自建的清單挑一個，會放在所有技能前面 |
+| `output_language` | 輸出語言 |
+| `skill_1` … `skill_5` | 依序套用，填了一個才會出現下一個 |
+| `duration_seconds` | 0–15 秒，影片模式用 |
+| `aspect_ratio` | 畫面比例 |
+| `image_1` … `image_9` | 接上一個才會長出下一個 |
+| `video_1` … `video_3` | 單支上限 15 秒，超過只取前段 |
+| `audio_1` … `audio_3` | 三支合計上限 15 秒 |
+
+影像角色由 `mode` 自動決定，不用另外標記：
+
+| mode | image_1 | image_2 | 其餘 |
+| --- | --- | --- | --- |
+| I2VA | 首幀 | 參考圖 | 參考圖 |
+| L2VA | 尾幀 | 參考圖 | 參考圖 |
+| FL2VA | 首幀 | 尾幀 | 參考圖 |
+| Ref2VA | 參考圖 | 參考圖 | 參考圖 |
+
+### 進階節點
+
+拆開的版本都還在，收在節點選單的 **Llama Prompter / advanced** 底下。
+需要在同一張圖裡用兩組不同伺服器設定、或是要接字串節點動態換技能時才用得到。
+
 | 節點 | 用途 |
 | --- | --- |
 | Llama Server 連線 | 位址、模型、金鑰、逾時、SSL、串流、顯存選項 |
 | Llama 取樣參數 | temperature / top_p / top_k / min_p / max_tokens / 懲罰 / seed / stop / JSON Schema / GBNF |
 | Llama 影像/影片選項 | 抽幀張數與方式、長邊上限、影像格式與品質 |
-| Llama Skill | 選擇技能與切換模式，可附加額外指令與 references |
-| Llama 影像插槽 | 幫影像加上角色標籤，可串接 |
+| Llama Skill | 選擇技能，可串接 |
+| Llama 影像插槽 | 自訂影像角色標籤 |
 | Llama 影片規格 | 模式、秒數、比例、解析度、fps、備註 |
-| Llama Prompter | 主節點，輸出單一提示詞 |
-| Llama 影片 Prompter | 分欄位輸出（見下方） |
+| Llama Prompter | 輸出單一提示詞 |
+| Llama 影片 Prompter | 分欄位輸出 |
 | Llama 取出欄位 | 從結構化文字取出指定欄位 |
 | Llama Skill 清單 | 列出目前可用的技能 |
 | Llama 文字預覽 | 在畫布上顯示文字 |
 | Llama 連線測試 | 回報伺服器狀態 |
-
-最小連法：
-
-```
-Llama Server 連線 ─┐
-Llama Skill ───────┼─→ Llama Prompter ─→ prompt ─→ CLIP Text Encode
-LoadImage ─────────┘
-```
 
 ---
 
@@ -247,6 +277,8 @@ ComfyUI 設定 → **Llama Prompter**：
 - **Server** — 位址、模型、金鑰、逾時、SSL、串流、測試連線
 - **Defaults** — 取樣參數與媒體預設值，新建節點時會套用
 - **Skills** — 預設技能、額外掃描資料夾（以 `;` 分隔）、技能管理器
+- **System prompts** — AIO 節點下拉選單的內容，可自行新增與編輯
+- **AIO** — 影像 / 影片 / 音訊 / 技能的數量上限與秒數上限、插槽是否隨接線長出來、以及要不要把技能的 `references/` 一起送出（預設關閉，開了 prompt 會從 1.6k 漲到 10k token）
 
 設定存在 `ComfyUI/user/default/llama_prompter/config.json`，節點的 `use_global_settings`
 打開後就會改讀這份設定。
